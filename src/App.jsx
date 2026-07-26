@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from './hooks/useAuth';
-import { signIn, signUp, signOut } from './lib/supabase';
+import { signIn, signUp, signOut, supabase } from './lib/supabase';
 import AppShell    from './components/layout/AppShell';
 import Dashboard   from './pages/Dashboard';
 import POS         from './pages/POS';
@@ -12,9 +12,11 @@ import Purchases   from './pages/Purchases';
 import Reports     from './pages/Reports';
 import GSTFiling   from './pages/GSTFiling';
 import AIAssistant from './pages/AIAssistant';
+import Branches    from './pages/Branches';
 import Team        from './pages/Team';
 import Billing     from './pages/Billing';
 import Settings    from './pages/Settings';
+import { useLang } from './lib/i18n';
 
 const T = { bg:'#060710', srf:'#0f1220', bdr:'#1e2540', blue:'#4f7cff', ink:'#eef0f8', sub:'#6b7598', muted:'#4a5175', red:'#ff4d6a', green:'#00d68f' };
 
@@ -49,12 +51,14 @@ function LoginPage() {
     <div style={{ minHeight:'100vh', background:T.bg, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
       <div style={{ width:'100%', maxWidth:400 }}>
         <div style={{ textAlign:'center', marginBottom:32 }}>
-          <div style={{ width:64, height:64, background:T.blue, borderRadius:16, display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize:24, fontWeight:900, color:'#fff', marginBottom:16 }}>ES</div>
+          <div style={{ width:64, height:64, background:T.blue, borderRadius:16, display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize:24, fontWeight:900, color:'#fff', marginBottom:16, boxShadow:'0 0 32px #4f7cff44' }}>ES</div>
           <div style={{ fontSize:26, fontWeight:800, color:T.ink }}>Elite Store</div>
           <div style={{ fontSize:13, color:T.sub, marginTop:4 }}>Business Management Platform</div>
         </div>
         <div style={{ background:T.srf, border:`1px solid ${T.bdr}`, borderRadius:14, padding:28 }}>
-          {error && <div style={{ background:error.startsWith('✅')?T.green+'18':T.red+'18', border:`1px solid ${error.startsWith('✅')?T.green:T.red}44`, borderRadius:8, padding:'10px 14px', color:error.startsWith('✅')?T.green:T.red, fontSize:13, marginBottom:16 }}>{error}</div>}
+          {error && (
+            <div style={{ background:error.startsWith('✅')?T.green+'18':T.red+'18', border:`1px solid ${error.startsWith('✅')?T.green:T.red}44`, borderRadius:8, padding:'10px 14px', color:error.startsWith('✅')?T.green:T.red, fontSize:13, marginBottom:16 }}>{error}</div>
+          )}
           <div style={{ display:'flex', background:T.bg, borderRadius:9, padding:3, marginBottom:20 }}>
             {[['login','Sign In'],['signup','Create Account']].map(([id,label]) => (
               <button key={id} onClick={() => { setMode(id); setError(''); }} style={{ flex:1, background:mode===id?T.srf:'transparent', color:mode===id?T.ink:T.sub, border:mode===id?`1px solid ${T.bdr}`:'none', borderRadius:7, padding:'8px', fontSize:13, fontWeight:mode===id?700:500, cursor:'pointer', fontFamily:'inherit' }}>{label}</button>
@@ -87,9 +91,25 @@ function LoginPage() {
 
 export default function App() {
   const { user, tenant, loading } = useAuth();
-  const [page,        setPage]        = useState('dashboard');
-  const [localTenant, setLocalTenant] = useState(null);
+  const [page,          setPage]          = useState('dashboard');
+  const [localTenant,   setLocalTenant]   = useState(null);
+  const [branches,      setBranches]      = useState([]);
+  const [activeBranch,  setActiveBranch]  = useState(null);
   const activeTenant = localTenant || tenant;
+
+  // Load branches when tenant is available
+  useEffect(() => {
+    if (!activeTenant?.id) return;
+    supabase.from('branches').select('*').eq('tenant_id', activeTenant.id).eq('active', true)
+      .order('is_main', { ascending: false }).order('name')
+      .then(({ data }) => {
+        if (data && data.length > 0) {
+          setBranches(data);
+          setActiveBranch(data.find(b => b.is_main) || data[0]);
+        }
+      })
+      .catch(() => {}); // branches table might not exist yet
+  }, [activeTenant?.id]);
 
   if (loading) return (
     <div style={{ minHeight:'100vh', background:T.bg, display:'flex', alignItems:'center', justifyContent:'center', flexDirection:'column', gap:16 }}>
@@ -101,26 +121,34 @@ export default function App() {
 
   if (!user) return <LoginPage />;
 
+  const props = { tenant: activeTenant, user, activeBranch };
+
   const PAGES = {
-    dashboard: <Dashboard   tenant={activeTenant} user={user} onNavigate={setPage} />,
-    pos:       <POS         tenant={activeTenant} user={user} />,
-    sales:     <Sales       tenant={activeTenant} user={user} />,
-    inventory: <Inventory   tenant={activeTenant} user={user} />,
-    customers: <Customers   tenant={activeTenant} user={user} />,
-    purchases: <Purchases   tenant={activeTenant} user={user} />,
-    expenses:  <Expenses    tenant={activeTenant} user={user} />,
-    reports:   <Reports     tenant={activeTenant} user={user} />,
-    gst:       <GSTFiling   tenant={activeTenant} user={user} />,
-    ai:        <AIAssistant tenant={activeTenant} user={user} />,
-    team:      <Team        tenant={activeTenant} user={user} />,
-    billing:   <Billing     tenant={activeTenant} user={user} />,
-    settings:  <Settings    tenant={activeTenant} user={user} onTenantUpdate={t => setLocalTenant(t)} />,
+    dashboard: <Dashboard  {...props} onNavigate={setPage} />,
+    pos:       <POS        {...props} />,
+    sales:     <Sales      {...props} />,
+    inventory: <Inventory  {...props} />,
+    customers: <Customers  {...props} />,
+    purchases: <Purchases  {...props} />,
+    expenses:  <Expenses   {...props} />,
+    reports:   <Reports    {...props} />,
+    gst:       <GSTFiling  {...props} />,
+    ai:        <AIAssistant {...props} />,
+    branches:  <Branches   {...props} />,
+    team:      <Team       {...props} />,
+    billing:   <Billing    {...props} />,
+    settings:  <Settings   {...props} onTenantUpdate={t => setLocalTenant(t)} />,
   };
 
   return (
     <>
       <style>{`*{box-sizing:border-box;margin:0;padding:0}body{background:#060710;color:#eef0f8;font-family:'DM Sans',system-ui,sans-serif}@keyframes spin{to{transform:rotate(360deg)}}::-webkit-scrollbar{width:5px}::-webkit-scrollbar-thumb{background:#1e2540;border-radius:3px}`}</style>
-      <AppShell tenant={activeTenant} user={user} page={page} onNavigate={setPage} onLogout={() => signOut()}>
+      <AppShell
+        tenant={activeTenant} user={user} page={page}
+        onNavigate={setPage} onLogout={() => signOut()}
+        branches={branches} activeBranch={activeBranch}
+        onBranchChange={setActiveBranch}
+      >
         {PAGES[page] || PAGES.dashboard}
       </AppShell>
     </>
