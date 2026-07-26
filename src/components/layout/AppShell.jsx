@@ -83,7 +83,7 @@ export default function AppShell({ tenant, user, page, onNavigate, onLogout, chi
                 title={!open ? tr(item.labelKey) : undefined}
                 style={{ display:'flex', alignItems:'center', gap:9, padding:'8px 9px', borderRadius:7, cursor:'pointer', marginBottom:2, background:active?T.blue+'22':'transparent', color:active?T.blue:T.sub }}>
                 <span style={{ fontSize:16, width:22, textAlign:'center', flexShrink:0 }}>{item.icon}</span>
-                {open && <span style={{ fontSize:13, fontWeight:active?700:500, whiteSpace:'nowrap' }}>{tr(item.labelKey)}</span>}
+                {open && <span style={{ fontSize:13, fontWeight:active?700:500, whiteSpace:'nowrap' }}>{item.label || tr(item.labelKey)}</span>}
               </div>
             );
           })}
