@@ -2,6 +2,9 @@ import { useState, useEffect } from 'react';
 import { useAuth } from './hooks/useAuth';
 import { signIn, signUp, signOut, supabase } from './lib/supabase';
 import AppShell    from './components/layout/AppShell';
+import Notifications  from './pages/Notifications';
+import OnlineStore    from './pages/OnlineStore';
+import CustomerPortal from './pages/CustomerPortal';
 import Dashboard   from './pages/Dashboard';
 import POS         from './pages/POS';
 import Sales       from './pages/Sales';
@@ -181,6 +184,9 @@ export default function App() {
     notifications: <Notifications {...props} onNavigate={setPage} />,
     store:         <OnlineStore   {...props} />,
     portal:        <CustomerPortal {...props} />,
+    notifications: <Notifications tenant={activeTenant} user={user} onNavigate={setPage} />,
+store:         <OnlineStore   tenant={activeTenant} user={user} />,
+portal:        <CustomerPortal tenant={activeTenant} user={user} />,
     settings:  <Settings   {...props} onTenantUpdate={t => setLocalTenant(t)} />,
   };
 
