@@ -1,18 +1,20 @@
 import { useState } from 'react';
 import { useAuth } from './hooks/useAuth';
 import { signIn, signUp, signOut } from './lib/supabase';
-import AppShell  from './components/layout/AppShell';
-import Dashboard from './pages/Dashboard';
-import POS       from './pages/POS';
-import Sales     from './pages/Sales';
-import Inventory from './pages/Inventory';
-import Customers from './pages/Customers';
-import Expenses  from './pages/Expenses';
-import Purchases from './pages/Purchases';
-import Reports   from './pages/Reports';
-import Settings  from './pages/Settings';
-import Team      from './pages/Team';
-import Billing   from './pages/Billing';
+import AppShell    from './components/layout/AppShell';
+import Dashboard   from './pages/Dashboard';
+import POS         from './pages/POS';
+import Sales       from './pages/Sales';
+import Inventory   from './pages/Inventory';
+import Customers   from './pages/Customers';
+import Expenses    from './pages/Expenses';
+import Purchases   from './pages/Purchases';
+import Reports     from './pages/Reports';
+import GSTFiling   from './pages/GSTFiling';
+import AIAssistant from './pages/AIAssistant';
+import Team        from './pages/Team';
+import Billing     from './pages/Billing';
+import Settings    from './pages/Settings';
 
 const T = { bg:'#060710', srf:'#0f1220', bdr:'#1e2540', blue:'#4f7cff', ink:'#eef0f8', sub:'#6b7598', muted:'#4a5175', red:'#ff4d6a', green:'#00d68f' };
 
@@ -47,7 +49,7 @@ function LoginPage() {
     <div style={{ minHeight:'100vh', background:T.bg, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
       <div style={{ width:'100%', maxWidth:400 }}>
         <div style={{ textAlign:'center', marginBottom:32 }}>
-          <div style={{ width:64, height:64, background:T.blue, borderRadius:16, display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize:24, fontWeight:900, color:'#fff', marginBottom:16, boxShadow:'0 0 32px #4f7cff44' }}>ES</div>
+          <div style={{ width:64, height:64, background:T.blue, borderRadius:16, display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize:24, fontWeight:900, color:'#fff', marginBottom:16 }}>ES</div>
           <div style={{ fontSize:26, fontWeight:800, color:T.ink }}>Elite Store</div>
           <div style={{ fontSize:13, color:T.sub, marginTop:4 }}>Business Management Platform</div>
         </div>
@@ -100,17 +102,19 @@ export default function App() {
   if (!user) return <LoginPage />;
 
   const PAGES = {
-    dashboard: <Dashboard tenant={activeTenant} user={user} onNavigate={setPage} />,
-    pos:       <POS       tenant={activeTenant} user={user} />,
-    sales:     <Sales     tenant={activeTenant} user={user} />,
-    inventory: <Inventory tenant={activeTenant} user={user} />,
-    customers: <Customers tenant={activeTenant} user={user} />,
-    purchases: <Purchases tenant={activeTenant} user={user} />,
-    expenses:  <Expenses  tenant={activeTenant} user={user} />,
-    reports:   <Reports   tenant={activeTenant} user={user} />,
-    team:      <Team      tenant={activeTenant} user={user} />,
-    billing:   <Billing   tenant={activeTenant} user={user} />,
-    settings:  <Settings  tenant={activeTenant} user={user} onTenantUpdate={t => setLocalTenant(t)} />,
+    dashboard: <Dashboard   tenant={activeTenant} user={user} onNavigate={setPage} />,
+    pos:       <POS         tenant={activeTenant} user={user} />,
+    sales:     <Sales       tenant={activeTenant} user={user} />,
+    inventory: <Inventory   tenant={activeTenant} user={user} />,
+    customers: <Customers   tenant={activeTenant} user={user} />,
+    purchases: <Purchases   tenant={activeTenant} user={user} />,
+    expenses:  <Expenses    tenant={activeTenant} user={user} />,
+    reports:   <Reports     tenant={activeTenant} user={user} />,
+    gst:       <GSTFiling   tenant={activeTenant} user={user} />,
+    ai:        <AIAssistant tenant={activeTenant} user={user} />,
+    team:      <Team        tenant={activeTenant} user={user} />,
+    billing:   <Billing     tenant={activeTenant} user={user} />,
+    settings:  <Settings    tenant={activeTenant} user={user} onTenantUpdate={t => setLocalTenant(t)} />,
   };
 
   return (

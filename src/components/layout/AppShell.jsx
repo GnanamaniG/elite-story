@@ -6,18 +6,20 @@ const T = {
 };
 
 const NAV = [
-  { id:'dashboard', label:'Dashboard',   icon:'📊' },
-  { id:'pos',       label:'POS / Sales', icon:'🛒' },
+  { id:'dashboard', label:'Dashboard',    icon:'📊' },
+  { id:'pos',       label:'POS / Sales',  icon:'🛒' },
   { id:'sales',     label:'Sales History',icon:'🧾' },
-  { id:'inventory', label:'Inventory',   icon:'📦' },
-  { id:'customers', label:'Customers',   icon:'👥' },
-  { id:'purchases', label:'Purchases',   icon:'🛍️' },
-  { id:'expenses',  label:'Expenses',    icon:'💸' },
-  { id:'reports',   label:'Reports',     icon:'📈' },
+  { id:'inventory', label:'Inventory',    icon:'📦' },
+  { id:'customers', label:'Customers',    icon:'👥' },
+  { id:'purchases', label:'Purchases',    icon:'🛍️' },
+  { id:'expenses',  label:'Expenses',     icon:'💸' },
+  { id:'reports',   label:'Reports',      icon:'📈' },
+  { id:'gst',       label:'GST Filing',   icon:'📋' },
+  { id:'ai',        label:'AI Assistant', icon:'🤖' },
   { divider: true },
-  { id:'team',      label:'Team',        icon:'👔' },
-  { id:'billing',   label:'Billing',     icon:'💳' },
-  { id:'settings',  label:'Settings',    icon:'⚙️' },
+  { id:'team',      label:'Team',         icon:'👔' },
+  { id:'billing',   label:'Billing',      icon:'💳' },
+  { id:'settings',  label:'Settings',     icon:'⚙️' },
 ];
 
 export default function AppShell({ tenant, user, page, onNavigate, onLogout, children }) {
@@ -32,20 +34,11 @@ export default function AppShell({ tenant, user, page, onNavigate, onLogout, chi
     window.addEventListener('online',  () => setOnline(true));
     window.addEventListener('offline', () => setOnline(false));
     window.addEventListener('resize',  onR);
-    if (mobile) setOpen(false);
-
-    // PWA install prompt
+    if (window.innerWidth < 768) setOpen(false);
     window.addEventListener('beforeinstallprompt', (e) => {
-      e.preventDefault();
-      setDeferredEvt(e);
-      setInstallable(true);
+      e.preventDefault(); setDeferredEvt(e); setInstallable(true);
     });
-
-    // Register service worker
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/sw.js').catch(console.warn);
-    }
-
+    if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => {});
     return () => { window.removeEventListener('resize', onR); };
   }, []);
 
@@ -99,10 +92,10 @@ export default function AppShell({ tenant, user, page, onNavigate, onLogout, chi
           })}
         </nav>
 
-        {/* Install PWA button */}
+        {/* Install PWA */}
         {installable && open && (
           <div style={{ padding:'8px 10px', borderTop:`1px solid ${T.bdr}` }}>
-            <button onClick={handleInstall} style={{ width:'100%', background:T.blue+'22', color:T.blue, border:`1px solid ${T.blue}44`, borderRadius:8, padding:'8px 10px', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit', display:'flex', alignItems:'center', gap:8 }}>
+            <button onClick={handleInstall} style={{ width:'100%', background:T.blue+'22', color:T.blue, border:`1px solid ${T.blue}44`, borderRadius:8, padding:'8px 10px', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
               📱 Install App
             </button>
           </div>
@@ -122,26 +115,22 @@ export default function AppShell({ tenant, user, page, onNavigate, onLogout, chi
 
       {/* Main */}
       <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden' }}>
-        {/* Topbar */}
         <div style={{ height:50, background:T.srf, borderBottom:`1px solid ${T.bdr}`, display:'flex', alignItems:'center', padding:'0 14px', gap:10, flexShrink:0 }}>
           <button onClick={() => setOpen(s => !s)} style={{ background:'none', border:'none', color:T.sub, cursor:'pointer', fontSize:20, lineHeight:1 }}>☰</button>
           {!online && (
             <div style={{ display:'flex', alignItems:'center', gap:5, background:T.amber+'18', border:`1px solid ${T.amber}44`, borderRadius:6, padding:'3px 9px', fontSize:11, color:T.amber }}>
-              📴 Offline — changes saved locally
+              📴 Offline
             </div>
           )}
           <div style={{ flex:1 }} />
-          {/* Trial badge */}
           {tenant?.plan_status === 'trial' && (
             <div onClick={() => onNavigate('billing')} style={{ background:T.amber+'18', border:`1px solid ${T.amber}44`, borderRadius:6, padding:'3px 10px', fontSize:11, color:T.amber, cursor:'pointer' }}>
-              Trial · {Math.max(0, Math.ceil((new Date(tenant.trial_ends_at||Date.now()) - new Date()) / 86400000))} days → Upgrade
+              Trial → Upgrade
             </div>
           )}
           <div style={{ width:8, height:8, borderRadius:'50%', background:online?T.green:T.amber }} />
           <span style={{ fontSize:11, color:online?T.green:T.amber }}>{online?'Live':'Offline'}</span>
         </div>
-
-        {/* Page content */}
         <div style={{ flex:1, overflow:'auto' }}>{children}</div>
       </div>
     </div>
