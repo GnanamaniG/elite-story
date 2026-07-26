@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useLang, LANGUAGES } from '../lib/i18n';
+import { useLang, LANGUAGES } from '../../lib/i18n';
 
 const T = {
   bg:'#060710', srf:'#0f1220', bdr:'#1e2540', blue:'#4f7cff',
