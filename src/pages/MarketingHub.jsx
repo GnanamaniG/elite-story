@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { HubTabs, HubHeader } from './HubShell';
 import Campaigns      from './Campaigns';
 import WhatsAppCatalog from './WhatsAppCatalog';
@@ -22,8 +22,9 @@ const TABS = [
   { id:'catalog',   label:'Product Catalog',icon:'📱' },
 ];
 
-export default function MarketingHub({ tenant }) {
+export default function MarketingHub({ tenant, deepTab }) {
   const [tab, setTab] = useState('campaigns');
+  useEffect(() => { if (deepTab && TABS.some(t=>t.id===deepTab)) setTab(deepTab); }, [deepTab]);
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
       <HubHeader title="Marketing" subtitle="Campaigns, WhatsApp, SMS, promo codes and online store" icon="📣"/>

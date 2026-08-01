@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { HubTabs, HubHeader } from './HubShell';
 import AIAssistant from './AIAssistant';
 import AIAnalytics from './AIAnalytics';
@@ -8,8 +8,9 @@ const TABS = [
   { id:'analytics', label:'AI Analytics',  icon:'📊' },
 ];
 
-export default function AIHub({ tenant }) {
+export default function AIHub({ tenant, deepTab }) {
   const [tab, setTab] = useState('assistant');
+  useEffect(() => { if (deepTab && TABS.some(t=>t.id===deepTab)) setTab(deepTab); }, [deepTab]);
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
       <HubHeader title="AI Tools" subtitle="AI-powered assistant and business analytics" icon="🤖"/>

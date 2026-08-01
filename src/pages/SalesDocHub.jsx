@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { HubTabs, HubHeader } from './HubShell';
 import Quotations    from './Quotations';
 import EMIManager    from './EMIManager';
@@ -14,8 +14,9 @@ const TABS = [
   { id:'credit',     label:'Credit Ledger',icon:'📒' },
 ];
 
-export default function SalesDocHub({ tenant }) {
+export default function SalesDocHub({ tenant, deepTab }) {
   const [tab, setTab] = useState('quotations');
+  useEffect(() => { if (deepTab && TABS.some(t=>t.id===deepTab)) setTab(deepTab); }, [deepTab]);
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
       <HubHeader title="Sales Documents" subtitle="Quotations, EMI, e-Way Bill and e-Invoice" icon="📄"/>

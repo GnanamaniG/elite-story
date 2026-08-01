@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { HubTabs, HubHeader } from './HubShell';
 import BusinessHealthScore from './BusinessHealthScore';
 import Reports             from './Reports';
@@ -20,8 +20,9 @@ const TABS = [
   { id:'ai',          label:'AI Analytics',      icon:'🤖' },
 ];
 
-export default function ReportsHub({ tenant }) {
+export default function ReportsHub({ tenant, deepTab }) {
   const [tab, setTab] = useState('health');
+  useEffect(() => { if (deepTab && TABS.some(t=>t.id===deepTab)) setTab(deepTab); }, [deepTab]);
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
       <HubHeader title="Reports & Analytics" subtitle="Business health, performance and insights" icon="📊"/>

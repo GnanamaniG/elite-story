@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { HubTabs, HubHeader } from './HubShell';
 import Loyalty       from './Loyalty';
 import LoyaltyTiers  from './LoyaltyTiers';
@@ -18,8 +18,9 @@ const TABS = [
   { id:'subs',     label:'Subscriptions',  icon:'🔁' },
 ];
 
-export default function LoyaltyHub({ tenant }) {
+export default function LoyaltyHub({ tenant, deepTab }) {
   const [tab, setTab] = useState('points');
+  useEffect(() => { if (deepTab && TABS.some(t=>t.id===deepTab)) setTab(deepTab); }, [deepTab]);
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
       <HubHeader title="Loyalty & CRM" subtitle="Points, tiers, coupons, referrals and pipeline" icon="👑"/>

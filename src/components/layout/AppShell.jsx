@@ -1,5 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useLang, LANGUAGES } from '../../lib/i18n';
+import CommandPalette   from '../shell/CommandPalette';
+import ShortcutsHelp    from '../shell/ShortcutsHelp';
+import NotificationBell from '../shell/NotificationBell';
+import useShortcuts     from '../../hooks/useShortcuts';
 
 const SIDEBAR_BG    = '#7B1E1E';
 const SIDEBAR_HOVER = '#9B2C2C';
@@ -47,6 +51,25 @@ export default function AppShell({ children, user, tenant, page, onNavigate, onL
   const [mobOpen,   setMobOpen]   = useState(false);
   const { lang, setLang }         = useLang();
   const [showLang,  setShowLang]  = useState(false);
+  const [palette,   setPalette]   = useState(false);
+  const [helpOpen,  setHelpOpen]  = useState(false);
+  const [seqHint,   setSeqHint]   = useState(null);
+
+  // Global keyboard shortcuts
+  useShortcuts({
+    onNavigate: (page, tab) => { onNavigate(page, tab); },
+    onPalette:  () => setPalette(p=>!p),
+    onHelp:     () => setHelpOpen(h=>!h),
+    onToggleSidebar: () => mobile ? setMobOpen(s=>!s) : setCollapsed(s=>!s),
+  });
+
+  useEffect(() => {
+    const start = e => setSeqHint(e.detail.key);
+    const end   = () => setSeqHint(null);
+    window.addEventListener('seq-start', start);
+    window.addEventListener('seq-end',   end);
+    return () => { window.removeEventListener('seq-start', start); window.removeEventListener('seq-end', end); };
+  }, []);
 
   useEffect(() => {
     const fn = () => setMobile(window.innerWidth < 768);
@@ -180,6 +203,22 @@ export default function AppShell({ children, user, tenant, page, onNavigate, onL
           )}
           {!online && <div style={{ background:'#FFFBEB', border:'1px solid #FDE68A', borderRadius:6, padding:'2px 9px', fontSize:10, color:'#D97706' }}>📴 Offline</div>}
           <div style={{ flex:1 }} />
+
+          {/* Command palette trigger */}
+          <button onClick={()=>setPalette(true)}
+            style={{ display:'flex', alignItems:'center', gap:8, background:BG, border:`1px solid ${BDR}`, borderRadius:8, padding:'6px 12px', color:SUB, fontSize:12, cursor:'pointer', fontFamily:'inherit', minWidth:190 }}
+            onMouseEnter={e=>{ e.currentTarget.style.borderColor=RED; e.currentTarget.style.color=RED; }}
+            onMouseLeave={e=>{ e.currentTarget.style.borderColor=BDR; e.currentTarget.style.color=SUB; }}>
+            <span>🔍</span>
+            <span style={{ flex:1, textAlign:'left' }}>Search anything…</span>
+            <kbd style={{ background:WHITE, border:`1px solid ${BDR}`, borderRadius:4, padding:'1px 6px', fontSize:10, fontFamily:'inherit' }}>Ctrl K</kbd>
+          </button>
+
+          <NotificationBell tenant={tenant} onNavigate={onNavigate}/>
+
+          <button onClick={()=>setHelpOpen(true)} title="Keyboard shortcuts (?)"
+            style={{ background:BG, border:`1px solid ${BDR}`, borderRadius:8, padding:'6px 10px', color:SUB, fontSize:13, cursor:'pointer', fontFamily:'inherit' }}>⌨️</button>
+
           <div style={{ position:'relative' }}>
             <button onClick={() => setShowLang(s=>!s)}
               style={{ background:BG, border:`1px solid ${BDR}`, borderRadius:7, padding:'5px 11px', color:SUB, fontSize:11, cursor:'pointer', fontFamily:'inherit' }}>
@@ -203,6 +242,18 @@ export default function AppShell({ children, user, tenant, page, onNavigate, onL
         </div>
         <div style={{ flex:1, overflow:'auto' }}>{children}</div>
       </div>
+
+      {/* ── Global overlays ─────────────────────────────── */}
+      <CommandPalette open={palette} onClose={()=>setPalette(false)} onNavigate={onNavigate} tenant={tenant}/>
+      <ShortcutsHelp  open={helpOpen} onClose={()=>setHelpOpen(false)}/>
+
+      {/* Sequence key hint */}
+      {seqHint&&(
+        <div style={{ position:'fixed', bottom:24, left:'50%', transform:'translateX(-50%)', background:'#111827', color:'#fff', borderRadius:10, padding:'10px 18px', fontSize:13, zIndex:950, boxShadow:'0 8px 30px rgba(0,0,0,.3)', display:'flex', alignItems:'center', gap:10 }}>
+          <kbd style={{ background:'rgba(255,255,255,.18)', borderRadius:5, padding:'3px 9px', fontWeight:700, fontFamily:'inherit' }}>{seqHint.toUpperCase()}</kbd>
+          <span style={{ opacity:.75 }}>{seqHint==='g'?'Go to… (D P S I C B R A H T)':'New… (S I C P E Q)'}</span>
+        </div>
+      )}
     </div>
   );
 }

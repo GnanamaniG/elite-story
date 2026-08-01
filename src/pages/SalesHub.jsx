@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { HubTabs, HubHeader } from './HubShell';
 import Sales              from './Sales';
 import B2BOrders          from './B2BOrders';
@@ -22,8 +22,9 @@ const TABS = [
   { id:'statements', label:'Statements',    icon:'📊' },
 ];
 
-export default function SalesHub({ tenant }) {
+export default function SalesHub({ tenant, deepTab }) {
   const [tab, setTab] = useState('history');
+  useEffect(() => { if (deepTab && TABS.some(t=>t.id===deepTab)) setTab(deepTab); }, [deepTab]);
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
       <HubHeader title="Sales" subtitle="Retail, wholesale, delivery, warranty and collections" icon="📄"/>
