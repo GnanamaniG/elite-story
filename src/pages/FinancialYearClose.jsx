@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-
+import { getSales, getExpenses, getPurchases, getInventory, getCustomers } from '../lib/supabase';
 
 const T = { bg:'#060710', srf:'#0f1220', card:'#141828', bdr:'#1e2540', blue:'#4f7cff', ink:'#eef0f8', sub:'#6b7598', muted:'#4a5175', green:'#00d68f', amber:'#ffb547', red:'#ff4d6a', purple:'#9b72ff', teal:'#00c9b1' };
 const fmt = n => 'Rs.' + (n||0).toLocaleString('en-IN', { maximumFractionDigits:0 });
@@ -25,11 +25,11 @@ export default function FinancialYearClose({ tenant, user }) {
     const endDate    = `20${yr2}-03-31`;
 
     const [sales, expenses, purchases, inventory, customers, logs] = await Promise.all([
-      (await supabase.from('sales').select('total,gst_amount,items,customer,date,status,payment_mode').eq('tenant_id',tenant.id).order('date').limit(5000).then(r=>r.data||[])),
-      (await supabase.from('expenses').select('amount,category,date').eq('tenant_id',tenant.id).then(r=>r.data||[])),
-      (await supabase.from('purchases').select('total,date').eq('tenant_id',tenant.id).then(r=>r.data||[])),
-      (await supabase.from('inventory').select('stock,sp,cp').eq('tenant_id',tenant.id).eq('active',true).then(r=>r.data||[])),
-      (await supabase.from('customers').select('id,outstanding').eq('tenant_id',tenant.id).then(r=>r.data||[])),
+      getSales(tenant.id, 5000),
+      getExpenses(tenant.id),
+      getPurchases(tenant.id),
+      getInventory(tenant.id),
+      getCustomers(tenant.id),
       supabase.from('year_close_log').select('*').eq('tenant_id', tenant.id).order('closed_at', { ascending:false }),
     ]);
 

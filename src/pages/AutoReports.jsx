@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-
+import { getSales, getExpenses, getInventory } from '../lib/supabase';
 
 const T = { bg:'#060710', srf:'#0f1220', card:'#141828', bdr:'#1e2540', blue:'#4f7cff', ink:'#eef0f8', sub:'#6b7598', muted:'#4a5175', green:'#00d68f', amber:'#ffb547', red:'#ff4d6a', teal:'#00c9b1' };
 const fmt = n => 'Rs.' + (n||0).toLocaleString('en-IN', { maximumFractionDigits:0 });
@@ -51,9 +51,9 @@ export default function AutoReports({ tenant, user }) {
     const yesterday  = new Date(now-86400000).toISOString().slice(0,10);
     const monthStart = today.slice(0,7)+'-01';
     const [sales, expenses, inventory] = await Promise.all([
-      (await supabase.from('sales').select('total,payment_mode,date,customer').eq('tenant_id',tenant.id).order('date',{ascending:false}).limit(500).then(r=>r.data||[])),
-      (await supabase.from('expenses').select('amount,category,date').eq('tenant_id',tenant.id).then(r=>r.data||[])),
-      (await supabase.from('inventory').select('id,name,stock,alert').eq('tenant_id',tenant.id).eq('active',true).then(r=>r.data||[])),
+      getSales(tenant.id, 500),
+      getExpenses(tenant.id),
+      getInventory(tenant.id),
     ]);
 
     const todaySales  = sales.filter(s=>s.date===today);

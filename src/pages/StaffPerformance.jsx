@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-
+import { getSales } from '../lib/supabase';
 
 const T = { bg:'#060710', srf:'#0f1220', card:'#141828', bdr:'#1e2540', blue:'#4f7cff', ink:'#eef0f8', sub:'#6b7598', muted:'#4a5175', green:'#00d68f', amber:'#ffb547', red:'#ff4d6a', purple:'#9b72ff', teal:'#00c9b1' };
 const fmt  = n => 'Rs.' + (n||0).toLocaleString('en-IN', { maximumFractionDigits:0 });
@@ -22,7 +22,7 @@ export default function StaffPerformance({ tenant }) {
     setLoading(true);
     const [targetsRes, salesData] = await Promise.all([
       supabase.from('staff_targets').select('*').eq('tenant_id', tenant.id).eq('period', period),
-      (await supabase.from('sales').select('total,date,staff_name,staff_id').eq('tenant_id',tenant.id).order('date',{ascending:false}).limit(1000).then(r=>r.data||[])),
+      getSales(tenant.id, 1000),
     ]);
     setTargets(targetsRes.data||[]);
     setSales(salesData.filter(s=>(s.date||'').startsWith(period)));

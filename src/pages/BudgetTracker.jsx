@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-
+import { getExpenses } from '../lib/supabase';
 
 const T = { bg:'#060710', srf:'#0f1220', card:'#141828', bdr:'#1e2540', blue:'#4f7cff', ink:'#eef0f8', sub:'#6b7598', muted:'#4a5175', green:'#00d68f', amber:'#ffb547', red:'#ff4d6a', teal:'#00c9b1' };
 const fmt = n => 'Rs.' + (n||0).toLocaleString('en-IN', { maximumFractionDigits:0 });
@@ -22,7 +22,7 @@ export default function BudgetTracker({ tenant }) {
     setLoading(true);
     const [budgetsRes, expenses] = await Promise.all([
       supabase.from('budgets').select('*').eq('tenant_id', tenant.id).eq('period', period),
-      (await supabase.from('expenses').select('*').eq('tenant_id',tenant.id).then(r=>r.data||[])),
+      getExpenses(tenant.id),
     ]);
     const bData = budgetsRes.data||[];
     setBudgets(bData);

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-
+import { getInventory } from '../lib/supabase';
 
 const T = { bg:'#060710', srf:'#0f1220', card:'#141828', bdr:'#1e2540', blue:'#4f7cff', ink:'#eef0f8', sub:'#6b7598', muted:'#4a5175', green:'#00d68f', amber:'#ffb547', red:'#ff4d6a', purple:'#9b72ff', teal:'#00c9b1' };
 const STATUS_COLOR = { pending:T.sub, matched:T.green, short:T.red, excess:T.amber };
@@ -34,7 +34,7 @@ export default function StockAudit({ tenant, user }) {
   async function createAudit() {
     const name   = `Stock Audit — ${new Date().toLocaleDateString('en-IN')}`;
     setCreating(true);
-    const inventory = await (await supabase.from('inventory').select('*').eq('tenant_id',tenant.id).eq('active',true).then(r=>r.data||[]));
+    const inventory = await getInventory(tenant.id);
     const { data:audit } = await supabase.from('stock_audits').insert({ tenant_id:tenant.id, name, total_items:inventory.length, started_by:user?.id }).select().single();
     const items = inventory.map(i=>({ tenant_id:tenant.id, audit_id:audit.id, item_id:i.id, item_name:i.name, system_qty:i.stock||0, status:'pending' }));
     await supabase.from('audit_items').insert(items);

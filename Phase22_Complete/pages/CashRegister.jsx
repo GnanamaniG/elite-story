@@ -1,56 +1,11 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-
-// ── Inline thermal print (no external lib needed) ─────────────
-function printCashSummary(session, sales, tenant) {
-  const w    = window.open('', '_blank', 'width=340,height=500');
-  const biz  = tenant?.name || 'Elite Store';
-  const date = new Date(session.opened_at).toLocaleDateString('en-IN');
-  const cashSales = sales.filter(s=>s.payment_mode==='cash').reduce((t,s)=>t+(s.total||0),0);
-  const upiSales  = sales.filter(s=>s.payment_mode==='upi').reduce((t,s)=>t+(s.total||0),0);
-  const cardSales = sales.filter(s=>s.payment_mode==='card').reduce((t,s)=>t+(s.total||0),0);
-  const totalSales= sales.reduce((t,s)=>t+(s.total||0),0);
-  const html = `<!DOCTYPE html><html><head><style>
-    body{font-family:'Courier New',monospace;font-size:12px;margin:0;padding:8px;}
-    .center{text-align:center;}.bold{font-weight:bold;}.large{font-size:15px;}
-    .divider{border-top:1px dashed #000;margin:5px 0;}
-    .row{display:flex;justify-content:space-between;padding:2px 0;}
-  </style></head><body>
-    <div class="center bold large">${biz}</div>
-    <div class="center">END OF DAY REPORT</div>
-    <div class="center">${date}</div>
-    <div class="divider"></div>
-    <div class="row"><span>Opening Float</span><span>Rs.${(session.opening_float||0).toFixed(2)}</span></div>
-    <div class="divider"></div>
-    <div class="bold">SALES SUMMARY</div>
-    <div class="row"><span>Total Orders</span><span>${sales.length}</span></div>
-    <div class="row"><span>Cash Sales</span><span>Rs.${cashSales.toFixed(2)}</span></div>
-    <div class="row"><span>UPI Sales</span><span>Rs.${upiSales.toFixed(2)}</span></div>
-    <div class="row"><span>Card Sales</span><span>Rs.${cardSales.toFixed(2)}</span></div>
-    <div class="divider"></div>
-    <div class="row bold"><span>Total Revenue</span><span>Rs.${totalSales.toFixed(2)}</span></div>
-    <div class="row bold"><span>Expected Cash</span><span>Rs.${(session.expected_cash||0).toFixed(2)}</span></div>
-    <div class="row bold"><span>Actual Cash</span><span>Rs.${(session.closing_cash||0).toFixed(2)}</span></div>
-    <div class="divider"></div>
-    <div class="row bold large"><span>Difference</span><span style="color:${(session.difference||0)>=0?'green':'red'}">Rs.${(session.difference||0).toFixed(2)}</span></div>
-    <div style="height:20px"></div>
-    <script>window.onload=()=>{window.print();setTimeout(()=>window.close(),1000);}<\/script>
-  </body></html>`;
-  w.document.write(html); w.document.close();
-}
-
-
-
+import { getSales } from '../lib/supabase';
+import { printCashSummary } from '../lib/thermalPrint';
 
 const T = { bg:'#060710', srf:'#0f1220', card:'#141828', bdr:'#1e2540', blue:'#4f7cff', ink:'#eef0f8', sub:'#6b7598', muted:'#4a5175', green:'#00d68f', amber:'#ffb547', red:'#ff4d6a', teal:'#00c9b1' };
 const fmt = n => 'Rs.' + (n||0).toLocaleString('en-IN', { minimumFractionDigits:2, maximumFractionDigits:2 });
 const fmtN = n => 'Rs.' + (n||0).toLocaleString('en-IN', { maximumFractionDigits:0 });
-
-
-async function getSalesData(tenantId) {
-  const { data } = await supabase.from('sales').select('total,payment_mode,date,customer').eq('tenant_id', tenantId).order('date', { ascending:false }).limit(200);
-  return data || [];
-}
 
 export default function CashRegister({ tenant, user }) {
   const [session,    setSession]    = useState(null);
@@ -73,7 +28,7 @@ export default function CashRegister({ tenant, user }) {
     const today = new Date().toISOString().slice(0,10);
     const [sessRes, salesRes] = await Promise.all([
       supabase.from('cash_sessions').select('*').eq('tenant_id', tenant.id).order('opened_at', { ascending:false }).limit(30),
-      getSalesData(tenant.id),
+      getSales(tenant.id, 200),
     ]);
     const allSessions = sessRes.data || [];
     const openSession = allSessions.find(s => s.status === 'open');

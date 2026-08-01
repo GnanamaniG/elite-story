@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { supabase } from '../lib/supabase';
+import { getInventory } from '../lib/supabase';
 
 const T = { bg:'#060710', srf:'#0f1220', card:'#141828', bdr:'#1e2540', blue:'#4f7cff', ink:'#eef0f8', sub:'#6b7598', muted:'#4a5175', green:'#00d68f', amber:'#ffb547', red:'#ff4d6a' };
 
@@ -56,7 +56,7 @@ export default function QRLabels({ tenant }) {
   const [showQR,    setShowQR]    = useState(true);
   const [copies,    setCopies]    = useState(1);
 
-  useEffect(() => { if (tenant?.id) supabase.from('inventory').select('*').eq('tenant_id',tenant.id).eq('active',true).then(({data})=>setInventory(data||[])).finally(()=>setLoading(false)); }, [tenant?.id]);
+  useEffect(() => { if (tenant?.id) getInventory(tenant.id).then(setInventory).finally(()=>setLoading(false)); }, [tenant?.id]);
 
   const filtered = inventory.filter(i => !search || i.name.toLowerCase().includes(search.toLowerCase()) || (i.code||'').toLowerCase().includes(search.toLowerCase()));
 

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-
+import { getInventory } from '../lib/supabase';
 
 const T = { bg:'#060710', srf:'#0f1220', card:'#141828', bdr:'#1e2540', blue:'#4f7cff', ink:'#eef0f8', sub:'#6b7598', muted:'#4a5175', green:'#00d68f', amber:'#ffb547', red:'#ff4d6a', purple:'#9b72ff', teal:'#00c9b1' };
 const fmt = n => 'Rs.' + (n||0).toLocaleString('en-IN', { maximumFractionDigits:0 });
@@ -27,7 +27,7 @@ export default function WAOrderBot({ tenant }) {
     const [cfgRes, ordersRes, inv] = await Promise.all([
       supabase.from('wa_bot_config').select('*').eq('tenant_id', tenant.id).single(),
       supabase.from('wa_orders').select('*').eq('tenant_id', tenant.id).order('received_at', { ascending:false }),
-      (await supabase.from('inventory').select('*').eq('tenant_id',tenant.id).eq('active',true).then(r=>r.data||[])),
+      getInventory(tenant.id),
     ]);
     const cfg = cfgRes.data || { greeting:'Hi! Welcome to our store. Type "catalog" to see products or describe what you need.', catalog_msg:'Here are our products:', order_msg:'Thank you! We will contact you to confirm your order.', enabled:false };
     setConfig(cfg);

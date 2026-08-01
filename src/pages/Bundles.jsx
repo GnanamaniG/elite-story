@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-
+import { getInventory } from '../lib/supabase';
 
 const T = { bg:'#060710', srf:'#0f1220', card:'#141828', bdr:'#1e2540', blue:'#4f7cff', ink:'#eef0f8', sub:'#6b7598', muted:'#4a5175', green:'#00d68f', amber:'#ffb547', red:'#ff4d6a', purple:'#9b72ff', teal:'#00c9b1' };
 const fmt = n => 'Rs.' + (n||0).toLocaleString('en-IN', { maximumFractionDigits:0 });
@@ -134,7 +134,7 @@ export default function Bundles({ tenant }) {
     setLoading(true);
     const [bRes, inv] = await Promise.all([
       supabase.from('bundles').select('*, bundle_items(*)').eq('tenant_id', tenant.id).order('created_at', { ascending:false }),
-      (await supabase.from('inventory').select('*').eq('tenant_id',tenant.id).eq('active',true).then(r=>r.data||[])),
+      getInventory(tenant.id),
     ]);
     setBundles(bRes.data?.map(b=>({...b, items:b.bundle_items||[]}))||[]);
     setInventory(inv);

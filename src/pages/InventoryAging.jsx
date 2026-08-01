@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-
+import { getInventory } from '../lib/supabase';
 
 const T = { bg:'#060710', srf:'#0f1220', card:'#141828', bdr:'#1e2540', blue:'#4f7cff', ink:'#eef0f8', sub:'#6b7598', muted:'#4a5175', green:'#00d68f', amber:'#ffb547', red:'#ff4d6a', purple:'#9b72ff', teal:'#00c9b1' };
 const fmt = n => 'Rs.' + (n||0).toLocaleString('en-IN', { maximumFractionDigits:0 });
@@ -25,7 +25,7 @@ export default function InventoryAging({ tenant }) {
   async function load() {
     setLoading(true);
     const [inventory, salesRes] = await Promise.all([
-      (await supabase.from('inventory').select('*').eq('tenant_id',tenant.id).eq('active',true).then(r=>r.data||[])),
+      getInventory(tenant.id),
       supabase.from('sales').select('items,date').eq('tenant_id', tenant.id).gte('date', new Date(Date.now()-180*86400000).toISOString().slice(0,10)),
     ]);
 

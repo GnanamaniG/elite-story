@@ -1,7 +1,6 @@
 @echo off
 echo ============================================
-echo   Elite Store Phase 22 - Complete Deploy
-echo   (Fixed - no duplicate routes)
+echo   Elite Store Phase 22 - FINAL Fixed Deploy
 echo ============================================
 set BASE=C:\Users\ADMIN\Documents\BizFlowApp
 
@@ -16,7 +15,7 @@ for %%f in ("%~dp0pages\*.jsx") do (
 
 cd /d "%BASE%"
 git add .
-git commit -m "Phase 22 FIXED - Partnership, TDS, Demand Forecast, Accounting, Reorder"
+git commit -m "Phase 22 FINAL - Partnership, TDS, Demand Forecast, Accounting, Reorder"
 git push origin master
 
 echo.

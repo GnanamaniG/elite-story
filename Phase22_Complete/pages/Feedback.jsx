@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-
+import { getSales } from '../lib/supabase';
 
 const T = { bg:'#060710', srf:'#0f1220', card:'#141828', bdr:'#1e2540', blue:'#4f7cff', ink:'#eef0f8', sub:'#6b7598', muted:'#4a5175', green:'#00d68f', amber:'#ffb547', red:'#ff4d6a', purple:'#9b72ff', teal:'#00c9b1' };
 
@@ -23,7 +23,7 @@ export default function Feedback({ tenant }) {
     setLoading(true);
     const [fbRes, sales] = await Promise.all([
       supabase.from('feedback').select('*').eq('tenant_id', tenant.id).order('created_at', { ascending:false }),
-      (await supabase.from('sales').select('id,inv_num,total,customer,customer_id,date').eq('tenant_id',tenant.id).order('date',{ascending:false}).limit(50).then(r=>r.data||[])),
+      getSales(tenant.id, 50),
     ]);
     setFeedback(fbRes.data||[]);
     setRecentSales(sales.filter(s=>s.customer&&s.customer!=='Walk-in').slice(0,20));

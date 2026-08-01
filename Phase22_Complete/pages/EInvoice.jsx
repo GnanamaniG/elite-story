@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
-
+import { getSales } from '../lib/supabase';
 
 const T = { bg:'#060710', srf:'#0f1220', card:'#141828', bdr:'#1e2540', blue:'#4f7cff', ink:'#eef0f8', sub:'#6b7598', muted:'#4a5175', green:'#00d68f', amber:'#ffb547', red:'#ff4d6a', teal:'#00c9b1' };
 const fmt = n => (n||0).toFixed(2);
@@ -93,7 +93,7 @@ export default function EInvoice({ tenant }) {
 
   async function load() {
     setLoading(true);
-    const data = await (await supabase.from('sales').select('*').eq('tenant_id',tenant.id).order('date',{ascending:false}).limit(200).then(r=>r.data||[]));
+    const data = await getSales(tenant.id, 200);
     setSales(data.filter(s=>(s.total||0)>=0).slice(0,100));
     setLoading(false);
   }
