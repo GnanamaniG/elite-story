@@ -92,6 +92,19 @@ import WATemplates      from './pages/WATemplates';
 import AdvancedReports from './pages/AdvancedReports';
 import Subscriptions   from './pages/Subscriptions';
 import HRDashboard     from './pages/HRDashboard';
+import InvHub           from './pages/InvHub';
+import SalesHub         from './pages/SalesHub';
+import CustHub          from './pages/CustHub';
+import PurchHub         from './pages/PurchHub';
+import HRHub            from './pages/HRHub';
+import GSTHub           from './pages/GSTHub';
+import AccountingHub    from './pages/AccountingHub';
+import SalesDocHub      from './pages/SalesDocHub';
+import LoyaltyHub       from './pages/LoyaltyHub';
+import MarketingHub     from './pages/MarketingHub';
+import OpsHub           from './pages/OpsHub';
+import AIHub            from './pages/AIHub';
+import ToolsHub         from './pages/ToolsHub';
 
 
 const T = {
