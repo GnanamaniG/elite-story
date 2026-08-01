@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Fragment } from 'react';
 import { supabase } from '../lib/supabase';
 
 const T = {
@@ -181,8 +181,8 @@ export default function CustomerLedgerAging({ tenant }) {
               <div style={{ color:T.green, fontWeight:700 }}>No outstanding balances</div>
             </td></tr>
             :filtered.map(c=>(
-              <>
-                <tr key={c.id} onClick={()=>loadTxns(c)} style={{ borderBottom:`1px solid ${T.bdr}22`, cursor:'pointer', background:selCust?.id===c.id?'#FEF2F2':c.daysOld>90?'#FFFAFA':'transparent' }}>
+              <Fragment key={c.id}>
+                <tr onClick={()=>loadTxns(c)} style={{ borderBottom:`1px solid ${T.bdr}22`, cursor:'pointer', background:selCust?.id===c.id?'#FEF2F2':c.daysOld>90?'#FFFAFA':'transparent' }}>
                   <td style={{ padding:'11px 12px' }}>
                     <div style={{ color:T.ink, fontWeight:700 }}>{c.name}</div>
                     <div style={{ fontSize:10, color:T.muted }}>{c.phone||'No phone'} · {c.entryCount} entries</div>
@@ -203,7 +203,7 @@ export default function CustomerLedgerAging({ tenant }) {
                   </td>
                 </tr>
                 {selCust?.id===c.id&&(
-                  <tr key={c.id+'-detail'}>
+                  <tr>
                     <td colSpan={8} style={{ padding:0, background:'#FDFAFA' }}>
                       <div style={{ padding:'12px 20px' }}>
                         <div style={{ fontSize:11, fontWeight:700, color:T.darkRed, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:8 }}>Transaction History</div>
@@ -224,7 +224,7 @@ export default function CustomerLedgerAging({ tenant }) {
                     </td>
                   </tr>
                 )}
-              </>
+              </Fragment>
             ))}
             {filtered.length>0&&<tr style={{ background:T.lightRed }}>
               <td colSpan={2} style={{ padding:'11px 12px', fontWeight:800, color:T.darkRed }}>TOTAL ({filtered.length} customers)</td>
