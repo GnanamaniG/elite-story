@@ -1,0 +1,44 @@
+import { useState } from 'react';
+import { HubTabs, HubHeader } from './HubShell';
+import Campaigns      from './Campaigns';
+import WhatsAppCatalog from './WhatsAppCatalog';
+import WAOrderBot     from './WAOrderBot';
+import WATemplates    from './WATemplates';
+import SMSAlerts      from './SMSAlerts';
+import PromoCodes     from './PromoCodes';
+import Bundles        from './Bundles';
+import OnlineStore    from './OnlineStore';
+import ProductCatalog from './ProductCatalog';
+
+const TABS = [
+  { id:'campaigns', label:'Campaigns',     icon:'📣' },
+  { id:'wa',        label:'WA Catalog',    icon:'💬' },
+  { id:'wabot',     label:'WA Order Bot',  icon:'🤖' },
+  { id:'watpl',     label:'WA Templates',  icon:'📝' },
+  { id:'sms',       label:'SMS Alerts',    icon:'📱' },
+  { id:'promo',     label:'Promo Codes',   icon:'🏷️' },
+  { id:'bundles',   label:'Bundles',       icon:'📦' },
+  { id:'store',     label:'Online Store',  icon:'🌐' },
+  { id:'catalog',   label:'Product Catalog',icon:'📱' },
+];
+
+export default function MarketingHub({ tenant }) {
+  const [tab, setTab] = useState('campaigns');
+  return (
+    <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
+      <HubHeader title="Marketing" subtitle="Campaigns, WhatsApp, SMS, promo codes and online store" icon="📣"/>
+      <HubTabs tabs={TABS} active={tab} onChange={setTab}/>
+      <div style={{ flex:1, overflow:'auto', background:'#F7F3F3' }}>
+        {tab==='campaigns' && <Campaigns       tenant={tenant}/>}
+        {tab==='wa'        && <WhatsAppCatalog tenant={tenant}/>}
+        {tab==='wabot'     && <WAOrderBot      tenant={tenant}/>}
+        {tab==='watpl'     && <WATemplates     tenant={tenant}/>}
+        {tab==='sms'       && <SMSAlerts       tenant={tenant}/>}
+        {tab==='promo'     && <PromoCodes      tenant={tenant}/>}
+        {tab==='bundles'   && <Bundles         tenant={tenant}/>}
+        {tab==='store'     && <OnlineStore     tenant={tenant}/>}
+        {tab==='catalog'   && <ProductCatalog  tenant={tenant}/>}
+      </div>
+    </div>
+  );
+}
