@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { HubTabs, HubHeader } from './HubShell';
 import Branches      from './Branches';
 import CashRegister  from './CashRegister';
@@ -26,9 +26,8 @@ const TABS = [
   { id:'subs',      label:'Subscriptions',  icon:'🔁' },
 ];
 
-export default function OpsHub({ tenant, deepTab }) {
+export default function OpsHub({ tenant }) {
   const [tab, setTab] = useState('branches');
-  useEffect(() => { if (deepTab && TABS.some(t=>t.id===deepTab)) setTab(deepTab); }, [deepTab]);
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
       <HubHeader title="Operations" subtitle="Branches, cash, EOD, repairs, quality and reordering" icon="🏪"/>

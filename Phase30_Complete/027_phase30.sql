@@ -4,11 +4,8 @@
 -- Run AFTER 026_phase29.sql · Fully idempotent
 -- ═══════════════════════════════════════════════════════════════
 
-DROP POLICY IF EXISTS "sto_all"  ON stock_transfer_orders;
-DROP POLICY IF EXISTS "comp_all" ON compliance_calendar;
-DROP POLICY IF EXISTS "crun_all" ON commission_runs;
-DROP POLICY IF EXISTS "docx_all" ON document_expiry;
-
+-- DROP TABLE CASCADE removes the table's policies automatically.
+-- (DROP POLICY alone would fail if the table doesn't exist yet.)
 DROP TABLE IF EXISTS stock_transfer_orders CASCADE;
 DROP TABLE IF EXISTS compliance_calendar   CASCADE;
 DROP TABLE IF EXISTS commission_runs       CASCADE;

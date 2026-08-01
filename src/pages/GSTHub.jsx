@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { HubTabs, HubHeader } from './HubShell';
 import GSTFiling   from './GSTFiling';
 import ComplianceCalendar from './ComplianceCalendar';
@@ -18,9 +18,8 @@ const TABS = [
   { id:'ewb',    label:'e-Way Bill',            icon:'🚚' },
 ];
 
-export default function GSTHub({ tenant, deepTab }) {
+export default function GSTHub({ tenant }) {
   const [tab, setTab] = useState('calendar');
-  useEffect(() => { if (deepTab && TABS.some(t=>t.id===deepTab)) setTab(deepTab); }, [deepTab]);
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
       <HubHeader title="GST & Tax" subtitle="Filing, ITC, TDS, e-Invoice and e-Way Bill" icon="📋"/>

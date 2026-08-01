@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { HubTabs, HubHeader } from './HubShell';
 import Customers         from './Customers';
 import CustomerSegments  from './CustomerSegments';
@@ -26,9 +26,8 @@ const TABS = [
   { id:'feedback',  label:'Feedback',        icon:'💬' },
 ];
 
-export default function CustHub({ tenant, deepTab }) {
+export default function CustHub({ tenant }) {
   const [tab, setTab] = useState('list');
-  useEffect(() => { if (deepTab && TABS.some(t=>t.id===deepTab)) setTab(deepTab); }, [deepTab]);
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
       <HubHeader title="Customers" subtitle="Customers, credit, retention and reviews" icon="👥"/>

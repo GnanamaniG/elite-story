@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { HubTabs, HubHeader } from './HubShell';
 import Inventory        from './Inventory';
 import Variants         from './Variants';
@@ -32,9 +32,8 @@ const TABS = [
   { id:'qr',        label:'QR Labels',      icon:'📱' },
 ];
 
-export default function InvHub({ tenant, deepTab }) {
+export default function InvHub({ tenant }) {
   const [tab, setTab] = useState('products');
-  useEffect(() => { if (deepTab && TABS.some(t=>t.id===deepTab)) setTab(deepTab); }, [deepTab]);
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
       <HubHeader title="Inventory" subtitle="Products, pricing, valuation, adjustments and labels" icon="📦"/>

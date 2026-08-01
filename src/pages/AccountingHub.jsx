@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { HubTabs, HubHeader } from './HubShell';
 import ProfitAndLoss       from './ProfitAndLoss';
 import Accounting          from './Accounting';
@@ -18,9 +18,8 @@ const TABS = [
   { id:'partnership', label:'Partnership',      icon:'🤝' },
 ];
 
-export default function AccountingHub({ tenant, deepTab }) {
+export default function AccountingHub({ tenant }) {
   const [tab, setTab] = useState('pl');
-  useEffect(() => { if (deepTab && TABS.some(t=>t.id===deepTab)) setTab(deepTab); }, [deepTab]);
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
       <HubHeader title="Accounting" subtitle="P&L, cash book, cash flow and budgets" icon="📒"/>

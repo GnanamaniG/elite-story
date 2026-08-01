@@ -152,12 +152,12 @@ function LoginPage() {
 }
 
 export default function App() {
-  const nav=(p,t)=>{setPage(p);setDeepTab(t||null);};const{user,tenant,loading}=useAuth();const[page,setPage]=useState('dashboard');const[deepTab,setDeepTab]=useState(null);const[localTenant,setLocalTenant]=useState(null);const[branches,setBranches]=useState([]);const[activeBranch,setActiveBranch]=useState(null);
+  const{user,tenant,loading}=useAuth();const[page,setPage]=useState('dashboard');const[localTenant,setLocalTenant]=useState(null);const[branches,setBranches]=useState([]);const[activeBranch,setActiveBranch]=useState(null);
   const activeTenant=localTenant||tenant;
   useEffect(()=>{if(!activeTenant?.id)return;supabase.from('branches').select('*').eq('tenant_id',activeTenant.id).eq('active',true).order('is_main',{ascending:false}).order('name').then(({data})=>{if(data?.length){setBranches(data);setActiveBranch(data.find(b=>b.is_main)||data[0]);}}).catch(()=>{});},[activeTenant?.id]);
   if(loading)return(<div style={{minHeight:'100vh',background:'#F7F3F3',display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:16}}><div style={{width:52,height:52,background:'#7B1E1E',borderRadius:14,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:900,fontSize:20,color:'#fff'}}>7SQ</div><div style={{width:40,height:40,border:'3px solid #C0392B',borderTopColor:'transparent',borderRadius:'50%',animation:'spin .7s linear infinite'}}/><style>{'@keyframes spin{to{transform:rotate(360deg)}}'}</style></div>);
   if(!user)return<LoginPage/>;
-  const props={deepTab,tenant:activeTenant,user,activeBranch};
+  const props={tenant:activeTenant,user,activeBranch};
   const PAGES={
     invhub:        <InvHub        {...props}/>,
     saleshub:      <SalesHub      {...props}/>,
@@ -207,7 +207,7 @@ export default function App() {
     warranty:      <WarrantyTracker     {...props}/>,
     taskboard:     <StaffTaskBoard      {...props}/>,
     smartalerts:   <SmartAlerts         {...props}/>,
-    dashboard:       <Dashboard           {...props} onNavigate={nav}/>,
+    dashboard:       <Dashboard           {...props} onNavigate={setPage}/>,
     pos:             <POS                 {...props}/>,
     sales:           <Sales               {...props}/>,
     inventory:       <Inventory           {...props}/>,
@@ -224,7 +224,7 @@ export default function App() {
     attendance:      <Attendance          {...props}/>,
     payroll:         <Payroll             {...props}/>,
     loyalty:         <Loyalty             {...props} onTenantUpdate={t=>setLocalTenant(t)}/>,
-    notifications:   <Notifications       {...props} onNavigate={nav}/>,
+    notifications:   <Notifications       {...props} onNavigate={setPage}/>,
     store:           <OnlineStore         {...props}/>,
     portal:          <CustomerPortal      {...props}/>,
     returns:         <Returns             {...props}/>,
@@ -296,5 +296,5 @@ export default function App() {
     billing:         <Billing             {...props}/>,
     settings:        <Settings            {...props} onTenantUpdate={t=>setLocalTenant(t)}/>,
   };
-  return(<><style>{"*{box-sizing:border-box;margin:0;padding:0}body{background:#F7F3F3;color:#111827;font-family:'DM Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}@keyframes spin{to{transform:rotate(360deg)}}"}</style><AppShell tenant={activeTenant} user={user} page={page} onNavigate={nav} onLogout={()=>signOut()} branches={branches} activeBranch={activeBranch} onBranchChange={setActiveBranch}>{PAGES[page]||PAGES.dashboard}</AppShell></>);
+  return(<><style>{"*{box-sizing:border-box;margin:0;padding:0}body{background:#F7F3F3;color:#111827;font-family:'DM Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}@keyframes spin{to{transform:rotate(360deg)}}"}</style><AppShell tenant={activeTenant} user={user} page={page} onNavigate={setPage} onLogout={()=>signOut()} branches={branches} activeBranch={activeBranch} onBranchChange={setActiveBranch}>{PAGES[page]||PAGES.dashboard}</AppShell></>);
 }

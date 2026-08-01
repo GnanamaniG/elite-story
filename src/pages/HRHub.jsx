@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { HubTabs, HubHeader } from './HubShell';
 import Attendance        from './Attendance';
 import StaffAttendanceQR from './StaffAttendanceQR';
@@ -26,9 +26,8 @@ const TABS = [
   { id:'dashboard',   label:'HR Dashboard',   icon:'👥' },
 ];
 
-export default function HRHub({ tenant, deepTab }) {
+export default function HRHub({ tenant }) {
   const [tab, setTab] = useState('qr');
-  useEffect(() => { if (deepTab && TABS.some(t=>t.id===deepTab)) setTab(deepTab); }, [deepTab]);
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
       <HubHeader title="HR & Payroll" subtitle="Attendance, payroll, tasks, targets and performance" icon="👷"/>

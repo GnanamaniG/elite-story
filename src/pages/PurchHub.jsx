@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { HubTabs, HubHeader } from './HubShell';
 import Purchases             from './Purchases';
 import PurchaseOrders        from './PurchaseOrders';
@@ -24,9 +24,8 @@ const TABS = [
   { id:'forecast',   label:'Demand Forecast',  icon:'🔮' },
 ];
 
-export default function PurchHub({ tenant, deepTab }) {
+export default function PurchHub({ tenant }) {
   const [tab, setTab] = useState('history');
-  useEffect(() => { if (deepTab && TABS.some(t=>t.id===deepTab)) setTab(deepTab); }, [deepTab]);
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
       <HubHeader title="Purchases" subtitle="Orders, suppliers, payables and performance" icon="🛒"/>
