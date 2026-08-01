@@ -24,12 +24,6 @@ const NAV = [
   { id:'expenses',      label:'Expenses',            icon:'💸' },
   { id:'reports',       label:'Reports',             icon:'📊' },
 
-  { section:'B2B & Advanced' },
-  { id:'b2borders',    label:'B2B / Wholesale Orders', icon:'🏢' },
-  { id:'requisitions', label:'Purchase Requisitions',  icon:'📝' },
-  { id:'performance',  label:'Product Performance',    icon:'📈' },
-  { id:'wareport',     label:'WA Daily Report',        icon:'📱' },
-  { id:'stockval',     label:'Stock Valuation',        icon:'🏦' },
   { section:'Finance' },
   { id:'accountinghub', label:'Accounting',          icon:'📒' },
   { id:'gsthub',        label:'GST & Tax',           icon:'📋' },
