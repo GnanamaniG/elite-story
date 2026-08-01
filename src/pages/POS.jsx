@@ -22,6 +22,10 @@ export default function POS({ tenant, activeBranch, user }) {
   const [customers,   setCustomers]   = useState([]);
   const [search,      setSearch]      = useState('');
   const [custSearch,  setCustSearch]  = useState('');
+  const [cat,         setCat]         = useState('all');
+  const [showNewCust, setShowNewCust] = useState(false);
+  const [newCust,     setNewCust]     = useState({ name:'', phone:'', email:'' });
+  const [savingCust,  setSavingCust]  = useState(false);
   const [payMode,     setPayMode]     = useState('cash');
   const [promoCode,   setPromoCode]   = useState('');
   const [promoResult, setPromoResult] = useState(null);
@@ -206,8 +210,32 @@ export default function POS({ tenant, activeBranch, user }) {
     w.document.write(html); w.document.close();
   }
 
-  const filtered     = inventory.filter(i => search && (i.name.toLowerCase().includes(search.toLowerCase())||(i.code||'').toLowerCase().includes(search.toLowerCase())));
+  const categories   = ['all', ...new Set(inventory.map(i=>i.cat||i.category).filter(Boolean))];
+  const gridItems    = inventory
+    .filter(i => cat==='all' || (i.cat||i.category)===cat)
+    .filter(i => !search
+      || i.name.toLowerCase().includes(search.toLowerCase())
+      || (i.code||'').toLowerCase().includes(search.toLowerCase())
+      || (i.barcode||'').includes(search));
+  const filtered     = search ? gridItems : [];
   const custFiltered = customers.filter(c => custSearch && (c.name.toLowerCase().includes(custSearch.toLowerCase())||(c.phone||'').includes(custSearch)));
+  async function addCustomer(e) {
+    e.preventDefault();
+    if (!newCust.name.trim()) return;
+    setSavingCust(true);
+    try {
+      const { data, error } = await supabase.from('customers')
+        .insert({ tenant_id:tenant.id, name:newCust.name.trim(), phone:newCust.phone.trim()||null, email:newCust.email.trim()||null })
+        .select().single();
+      if (error) throw error;
+      setCustomers(prev=>[...prev, data]);
+      setCustomer(data);
+      setShowNewCust(false); setCustSearch('');
+      setNewCust({ name:'', phone:'', email:'' });
+    } catch (err) { alert('Could not add customer: '+err.message); }
+    finally { setSavingCust(false); }
+  }
+
   const btn = (active, color) => ({ background:active?color:T.card, color:active?'#fff':T.sub, border:`1px solid ${active?color:T.bdr}`, borderRadius:7, padding:'8px 12px', fontSize:12, fontWeight:600, cursor:'pointer', fontFamily:'inherit' });
 
   // ── Session gate: no open session means no billing ──────────
@@ -239,9 +267,23 @@ export default function POS({ tenant, activeBranch, user }) {
             {heldBills.map(b=><button key={b.id} onClick={()=>resumeBill(b)} style={{ background:T.amber+'22', color:T.amber, border:`1px solid ${T.amber}44`, borderRadius:6, padding:'3px 10px', fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>{b.time} · {b.cart.length} items</button>)}
           </div>}
         </div>
-        <div style={{ flex:1, overflowY:'auto', padding:12 }}>
-          {!cart.length?<div style={{ textAlign:'center', color:T.muted, padding:60 }}><div style={{ fontSize:40, marginBottom:12 }}>🛒</div><div style={{ fontSize:14 }}>Search or scan items to add to cart</div></div>
-          :cart.map(item=>(
+        {/* Category filter */}
+        {categories.length>1&&(
+          <div style={{ display:'flex', gap:6, padding:'8px 12px', borderBottom:`1px solid ${T.bdr}`, overflowX:'auto', background:T.srf }}>
+            {categories.map(ct=>(
+              <button key={ct} onClick={()=>setCat(ct)}
+                style={{ padding:'5px 13px', background: cat===ct?T.red:T.card, color: cat===ct?'#fff':T.sub,
+                         border:`1px solid ${cat===ct?T.red:T.bdr}`, borderRadius:20, fontSize:11, fontWeight:600,
+                         cursor:'pointer', fontFamily:'inherit', whiteSpace:'nowrap' }}>
+                {ct==='all'?'All Items':ct}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Cart */}
+        <div style={{ flex:cart.length?1:0, overflowY:'auto', padding: cart.length?12:0, borderBottom: cart.length?`1px solid ${T.bdr}`:'none' }}>
+          {cart.map(item=>(
             <div key={item.id} style={{ display:'flex', alignItems:'center', gap:10, padding:'10px 0', borderBottom:`1px solid ${T.bdr}22` }}>
               <div style={{ flex:1 }}><div style={{ fontSize:14, color:T.ink, fontWeight:600 }}>{item.name}</div><div style={{ fontSize:12, color:T.muted }}>{fmt(item.rate)} each{item.gst>0?` · GST ${item.gst}%`:''}</div></div>
               <div style={{ display:'flex', alignItems:'center', gap:8 }}>
@@ -253,6 +295,44 @@ export default function POS({ tenant, activeBranch, user }) {
               <button onClick={()=>removeItem(item.id)} style={{ background:'none', border:'none', color:T.muted, cursor:'pointer', fontSize:18 }}>×</button>
             </div>
           ))}
+        </div>
+
+        {/* Product grid — always browsable */}
+        <div style={{ flex:cart.length?1.2:1, overflowY:'auto', padding:12, background:T.bg }}>
+          <div style={{ fontSize:10, color:T.sub, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:9 }}>
+            {search ? `${gridItems.length} match${gridItems.length!==1?'es':''}` : `${gridItems.length} products`}
+          </div>
+          {gridItems.length===0
+            ? <div style={{ textAlign:'center', color:T.muted, padding:'50px 20px' }}>
+                <div style={{ fontSize:38, marginBottom:10 }}>📦</div>
+                <div style={{ fontSize:14, fontWeight:600 }}>{search?`Nothing matches "${search}"`:'No products yet'}</div>
+                <div style={{ fontSize:12, marginTop:5 }}>{search?'Try a different name or code':'Add products under Inventory first'}</div>
+              </div>
+            : <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(150px,1fr))', gap:9 }}>
+                {gridItems.map(item=>{
+                  const out = (item.stock||0)<=0;
+                  return (
+                    <button key={item.id} onClick={()=>!out&&addItem(item)} disabled={out}
+                      style={{ background:T.srf, border:`1px solid ${out?'#FECACA':T.bdr}`, borderRadius:10,
+                               padding:'11px 12px', textAlign:'left', cursor: out?'not-allowed':'pointer',
+                               fontFamily:'inherit', opacity: out?.55:1, transition:'all .12s' }}
+                      onMouseEnter={e=>{ if(!out){ e.currentTarget.style.borderColor=T.red; e.currentTarget.style.transform='translateY(-1px)'; }}}
+                      onMouseLeave={e=>{ e.currentTarget.style.borderColor= out?'#FECACA':T.bdr; e.currentTarget.style.transform='none'; }}>
+                      <div style={{ fontSize:12.5, fontWeight:700, color:T.ink, marginBottom:3, lineHeight:1.3,
+                                    display:'-webkit-box', WebkitLineClamp:2, WebkitBoxOrient:'vertical', overflow:'hidden', minHeight:32 }}>
+                        {item.name}
+                      </div>
+                      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center' }}>
+                        <span style={{ fontSize:14, fontWeight:800, color:T.green }}>{fmt(item.sp)}</span>
+                        <span style={{ fontSize:10, color: out?T.red:(item.stock||0)<=5?T.amber:T.muted, fontWeight: out?700:500 }}>
+                          {out?'Out':`${item.stock} left`}
+                        </span>
+                      </div>
+                      {item.code&&<div style={{ fontSize:9, color:T.muted, marginTop:3 }}>{item.code}</div>}
+                    </button>
+                  );
+                })}
+              </div>}
         </div>
       </div>
 
@@ -267,10 +347,43 @@ export default function POS({ tenant, activeBranch, user }) {
               <button onClick={()=>{setCustomer(null);setLoyaltyRedeem(0);}} style={{ background:'none', border:'none', color:T.muted, cursor:'pointer', fontSize:18 }}>×</button>
             </div>):(
               <div style={{ position:'relative' }}>
-                <input value={custSearch} onChange={e=>setCustSearch(e.target.value)} placeholder="Search customer…" style={{ background:T.card, border:`1px solid ${T.bdr}`, borderRadius:8, padding:'8px 12px', color:T.ink, fontSize:13, fontFamily:'inherit', outline:'none', width:'100%' }}/>
-                {custFiltered.length>0&&custSearch&&<div style={{ position:'absolute', top:'100%', left:0, right:0, background:T.card, border:`1px solid ${T.bdr}`, borderRadius:8, zIndex:10, maxHeight:180, overflowY:'auto', marginTop:4 }}>
-                  {custFiltered.map(c=><div key={c.id} onClick={()=>{setCustomer(c);setCustSearch('');}} style={{ padding:'8px 12px', cursor:'pointer', borderBottom:`1px solid ${T.bdr}22`, display:'flex', justifyContent:'space-between' }}><div><div style={{ fontSize:13, color:T.ink }}>{c.name}</div><div style={{ fontSize:10, color:T.muted }}>{c.phone}</div></div><span style={{ fontSize:10, color:T.amber }}>⭐{c.loyalty_points||0}</span></div>)}
-                </div>}
+                <div style={{ display:'flex', gap:6 }}>
+                  <input value={custSearch} onChange={e=>setCustSearch(e.target.value)}
+                    placeholder="Search by name or phone…"
+                    style={{ flex:1, background:T.srf, border:`1px solid ${T.bdr}`, borderRadius:8, padding:'9px 12px', color:T.ink, fontSize:13, fontFamily:'inherit', outline:'none' }}/>
+                  <button type="button" onClick={()=>{ setNewCust(n=>({ ...n, name:/^\d+$/.test(custSearch)?'':custSearch, phone:/^\d+$/.test(custSearch)?custSearch:'' })); setShowNewCust(true); }}
+                    title="Add new customer"
+                    style={{ background:T.red, color:'#fff', border:'none', borderRadius:8, padding:'0 14px', fontSize:17, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>+</button>
+                </div>
+
+                {custSearch&&(
+                  <div style={{ position:'absolute', top:'100%', left:0, right:0, background:T.srf,
+                                border:`1px solid ${T.bdr}`, borderRadius:9, zIndex:50, maxHeight:230, overflowY:'auto',
+                                marginTop:5, boxShadow:'0 8px 28px rgba(0,0,0,.16)' }}>
+                    {custFiltered.length>0
+                      ? custFiltered.slice(0,8).map(cu=>(
+                          <div key={cu.id} onClick={()=>{ setCustomer(cu); setCustSearch(''); }}
+                            style={{ padding:'10px 13px', cursor:'pointer', borderBottom:`1px solid ${T.bdr}33`, display:'flex', justifyContent:'space-between', alignItems:'center' }}
+                            onMouseEnter={e=>e.currentTarget.style.background=T.bg}
+                            onMouseLeave={e=>e.currentTarget.style.background='transparent'}>
+                            <div>
+                              <div style={{ fontSize:13, color:T.ink, fontWeight:600 }}>{cu.name}</div>
+                              <div style={{ fontSize:11, color:T.muted }}>{cu.phone||'No phone'}</div>
+                            </div>
+                            <span style={{ fontSize:10, color:T.amber, fontWeight:700 }}>⭐{cu.loyalty_points||0}</span>
+                          </div>
+                        ))
+                      : (
+                        <div style={{ padding:'14px 13px', textAlign:'center' }}>
+                          <div style={{ fontSize:12, color:T.muted, marginBottom:9 }}>No customer matches "{custSearch}"</div>
+                          <button type="button" onClick={()=>{ setNewCust(n=>({ ...n, name:/^\d+$/.test(custSearch)?'':custSearch, phone:/^\d+$/.test(custSearch)?custSearch:'' })); setShowNewCust(true); }}
+                            style={{ background:T.red, color:'#fff', border:'none', borderRadius:8, padding:'8px 16px', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                            + Add "{custSearch}" as new customer
+                          </button>
+                        </div>
+                      )}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -333,6 +446,43 @@ export default function POS({ tenant, activeBranch, user }) {
           {lastInv&&<button onClick={()=>printReceipt(lastInv)} style={{ background:T.blue+'22', color:T.blue, border:'none', borderRadius:8, padding:'10px', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>🖨️ Print Last Receipt — {lastInv.inv_num}</button>}
         </div>
       </div>
+
+      {/* ── Quick add customer ─────────────────────────────── */}
+      {showNewCust&&(
+        <div onClick={()=>setShowNewCust(false)}
+          style={{ position:'fixed', inset:0, background:'rgba(17,24,39,.5)', zIndex:300, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
+          <div onClick={e=>e.stopPropagation()}
+            style={{ background:T.srf, borderRadius:15, padding:26, width:'100%', maxWidth:400, boxShadow:'0 20px 60px rgba(0,0,0,.25)' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', alignItems:'flex-start', marginBottom:18 }}>
+              <div>
+                <div style={{ fontSize:16, fontWeight:800, color:T.red }}>Add Customer</div>
+                <div style={{ fontSize:11, color:T.sub, marginTop:2 }}>They'll be selected for this bill straight away</div>
+              </div>
+              <button onClick={()=>setShowNewCust(false)} style={{ background:'none', border:'none', fontSize:22, cursor:'pointer', color:T.muted, lineHeight:1 }}>×</button>
+            </div>
+            <form onSubmit={addCustomer}>
+              {[['Name *','text','name','Customer name'],['Phone','tel','phone','10-digit mobile'],['Email','email','email','Optional']].map(([lb,tp,key,ph])=>(
+                <div key={key} style={{ marginBottom:13 }}>
+                  <label style={{ fontSize:10, color:T.sub, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.05em', display:'block', marginBottom:5 }}>{lb}</label>
+                  <input type={tp} value={newCust[key]} autoFocus={key==='name'}
+                    onChange={e=>setNewCust(n=>({ ...n, [key]:e.target.value }))}
+                    required={lb.includes('*')} placeholder={ph}
+                    style={{ width:'100%', background:T.bg, border:`1px solid ${T.bdr}`, borderRadius:8, padding:'10px 13px', color:T.ink, fontSize:14, fontFamily:'inherit', outline:'none' }}/>
+                </div>
+              ))}
+              <div style={{ display:'flex', gap:9, marginTop:18 }}>
+                <button type="button" onClick={()=>setShowNewCust(false)}
+                  style={{ flex:1, background:T.bg, color:T.sub, border:`1px solid ${T.bdr}`, borderRadius:9, padding:'12px', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Cancel</button>
+                <button type="submit" disabled={savingCust||!newCust.name.trim()}
+                  style={{ flex:2, background: newCust.name.trim()?T.green:T.bdr, color:'#fff', border:'none', borderRadius:9, padding:'12px', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                  {savingCust?'Saving…':'Add & Select'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }
