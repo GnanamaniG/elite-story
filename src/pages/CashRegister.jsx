@@ -55,10 +55,17 @@ export default function CashRegister({ tenant, user }) {
   async function openSession() {
     if (!openFloat && openFloat !== '0') return alert('Enter opening float amount');
     setSaving(true);
-    const { data } = await supabase.from('cash_sessions').insert({
-      tenant_id: tenant.id, opened_by: user?.id,
+    const base = {
+      tenant_id: tenant.id,
+      opened_by_email: user?.email || null,
       opening_float: parseFloat(openFloat)||0, status:'open',
-    }).select().single();
+    };
+    let { data, error:err } = await supabase.from('cash_sessions')
+      .insert({ ...base, opened_by: user?.id || null }).select().single();
+    if (err && /foreign key|violates/i.test(err.message||'')) {
+      ({ data, error:err } = await supabase.from('cash_sessions').insert(base).select().single());
+    }
+    if (err) { alert('Could not open session: '+err.message); setSaving(false); return; }
     setSession(data); setOpenFloat('');
     setSaving(false);
     await load();

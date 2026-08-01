@@ -2,7 +2,7 @@
 echo ============================================
 echo   7SQ - POS Session Gate + Role Fix
 echo ============================================
-echo  RUN 030_phase34b.sql IN SUPABASE FIRST!
+echo  RUN 031_fix_session_fk.sql IN SUPABASE FIRST!
 echo.
 pause
 set BASE=C:\Users\ADMIN\Documents\BizFlowApp

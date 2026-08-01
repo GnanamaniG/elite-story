@@ -41,14 +41,23 @@ export default function POSSession({ tenant, user, activeBranch, onOpen }) {
     if (total <= 0) { setError('Enter the opening cash in the drawer'); return; }
     setSaving(true); setError(null);
     try {
-      const { data, error:err } = await supabase.from('cash_sessions').insert({
+      const base = {
         tenant_id: tenant.id,
         branch_id: activeBranch?.id || null,
-        opened_by: user?.id || null,
         opening_float: total,
         denominations: mode==='count' ? denoms : null,
+        opened_by_email: user?.email || null,
         status: 'open',
-      }).select().single();
+      };
+
+      // Try with opened_by; if a foreign key rejects it, retry without.
+      let { data, error:err } = await supabase.from('cash_sessions')
+        .insert({ ...base, opened_by: user?.id || null }).select().single();
+
+      if (err && /foreign key|violates/i.test(err.message||'')) {
+        ({ data, error:err } = await supabase.from('cash_sessions')
+          .insert(base).select().single());
+      }
       if (err) throw err;
       onOpen?.(data);
     } catch (e) {
