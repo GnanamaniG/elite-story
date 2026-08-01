@@ -4,7 +4,6 @@ import SmartAlerts   from './SmartAlerts';
 import UsersAccess   from './UsersAccess';
 import Documents     from './Documents';
 import DocumentExpiry from './DocumentExpiry';
-import DocumentExpiry from './DocumentExpiry';
 import BackupRestore from './BackupRestore';
 import TallyExport   from './TallyExport';
 import AuditLog      from './AuditLog';
@@ -15,7 +14,6 @@ const TABS = [
   { id:'alerts',   label:'Smart Alerts',  icon:'🔔' },
   { id:'ai',       label:'AI Assistant',  icon:'🤖' },
   { id:'users',    label:'Users & Access',icon:'🔐' },
-  { id:'docexpiry',label:'Doc Expiry',    icon:'📜' },
   { id:'docexpiry',label:'Doc Expiry',    icon:'📜' },
   { id:'docs',     label:'Documents',     icon:'📂' },
   { id:'backup',   label:'Backup',        icon:'💾' },

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { HubTabs, HubHeader } from './HubShell';
 import SmartAlerts   from './SmartAlerts';
 import UsersAccess   from './UsersAccess';
@@ -22,9 +22,8 @@ const TABS = [
   { id:'notify',   label:'Notifications', icon:'📬' },
 ];
 
-export default function ToolsHub({ tenant, deepTab }) {
+export default function ToolsHub({ tenant }) {
   const [tab, setTab] = useState('alerts');
-  useEffect(() => { if (deepTab && TABS.some(t=>t.id===deepTab)) setTab(deepTab); }, [deepTab]);
   return (
     <div style={{ display:'flex', flexDirection:'column', height:'100%' }}>
       <HubHeader title="Tools & Admin" subtitle="Alerts, AI, users, backup and audit" icon="🔧"/>
