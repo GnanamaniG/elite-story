@@ -41,6 +41,13 @@ const NAV = [
   { section: 'Operations' },
   { id:'opshub',       label:'Operations',         icon:'🏪' },
 
+  { section:'Delivery & Payments' },
+  { id:'delivery',     label:'Delivery Management', icon:'🚚' },
+  { id:'paymentlinks', label:'Payment Links',        icon:'💸' },
+  { id:'warranty',     label:'Warranty Tracker',     icon:'🛡️' },
+  { section:'Team & Tasks' },
+  { id:'taskboard',    label:'Staff Task Board',     icon:'📋' },
+  { id:'smartalerts',  label:'Smart Alerts',         icon:'🔔' }, 	
   { section: 'Tools' },
   { id:'aihub',        label:'AI Tools',           icon:'🤖' },
   { id:'toolshub',     label:'Tools & Admin',      icon:'🔧' },
