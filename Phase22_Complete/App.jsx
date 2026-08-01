@@ -58,10 +58,7 @@ import VendorPortal       from './pages/VendorPortal';
 import ServiceBays        from './pages/ServiceBays';
 import CustomerApp     from './pages/CustomerApp';
 import ExpenseClaims    from './pages/ExpenseClaims';
-import AppUsers    from './pages/AppUsers';
-import Marketing   from './pages/Marketing';
 import Referrals   from './pages/Referrals';
-import CRMPipeline from './pages/CRMPipeline';
 import GSTR3B      from './pages/GSTR3B';
 import PartnershipAccounts from './pages/PartnershipAccounts';
 import TDSManagement       from './pages/TDSManagement';
@@ -166,11 +163,6 @@ export default function App() {
     advreports:      <AdvancedReports   {...props}/>,
     subscriptions:   <Subscriptions     {...props}/>,
     hrdashboard:     <HRDashboard       {...props}/>,
-    appusers:     <AppUsers    {...props}/>,
-    marketing:    <Marketing   {...props}/>,
-    referrals:    <Referrals   {...props}/>,
-    crmpipeline:  <CRMPipeline {...props}/>,
-    gstr3b:       <GSTR3B      {...props}/>,
     partnership:    <PartnershipAccounts {...props}/>,
     tds:            <TDSManagement       {...props}/>,
     demandforecast: <DemandForecast      {...props}/>,
