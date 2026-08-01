@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { HubTabs, HubHeader } from './_HubShell';
+import { HubTabs, HubHeader } from './HubShell';
 import Customers        from './Customers';
 import CustomerSegments from './CustomerSegments';
 import CreditLedger     from './CreditLedger';

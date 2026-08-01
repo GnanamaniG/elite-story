@@ -107,12 +107,12 @@ export default function AppShell({ children, user, tenant, page, onNavigate, onL
         {/* Logo */}
         <div style={{ padding: sideOpen ? '16px 16px 14px' : '16px 0 14px', borderBottom:`1px solid rgba(255,255,255,.1)`, display:'flex', alignItems:'center', gap:11, justifyContent: sideOpen ? 'flex-start' : 'center', flexShrink:0 }}>
           <div style={{ width:36, height:36, borderRadius:10, flexShrink:0, background:'rgba(255,255,255,.15)', backdropFilter:'blur(10px)', display:'flex', alignItems:'center', justifyContent:'center', fontWeight:900, fontSize:15, color:WHITE, border:'1px solid rgba(255,255,255,.25)', letterSpacing:'-0.03em' }}>
-            ES
+            7SQ
           </div>
           {sideOpen && (
             <div style={{ overflow:'hidden' }}>
               <div style={{ fontWeight:800, fontSize:13, color:WHITE, whiteSpace:'nowrap', overflow:'hidden', textOverflow:'ellipsis', maxWidth:164, letterSpacing:'-0.02em' }}>
-                {tenant?.name || 'Elite Store'}
+                {tenant?.name || '7SQ'}
               </div>
               <div style={{ fontSize:9, color:'rgba(255,255,255,.5)', marginTop:1, textTransform:'uppercase', letterSpacing:'0.05em' }}>{tenant?.plan || 'Starter'} Plan</div>
             </div>
@@ -199,7 +199,7 @@ export default function AppShell({ children, user, tenant, page, onNavigate, onL
 
           {/* Breadcrumb */}
           <div style={{ display:'flex', alignItems:'center', gap:6 }}>
-            <span style={{ fontSize:11, color:SUB }}>{tenant?.name || 'Elite Store'}</span>
+            <span style={{ fontSize:11, color:SUB }}>{tenant?.name || '7SQ'}</span>
             <span style={{ color:BDR }}>›</span>
             <span style={{ fontSize:12, fontWeight:700, color:RED, textTransform:'capitalize' }}>
               {NAV.find(n=>n.id===page)?.label || page || 'Dashboard'}

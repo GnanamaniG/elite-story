@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { HubTabs, HubHeader } from './_HubShell';
+import { HubTabs, HubHeader } from './HubShell';
 import Documents     from './Documents';
 import BackupRestore from './BackupRestore';
 import TallyExport   from './TallyExport';

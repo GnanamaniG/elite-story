@@ -1,6 +1,6 @@
 @echo off
 echo ============================================
-echo   Elite Store - Premium White/Red Design
+echo   7SQ Business Platform - Premium Deploy
 echo ============================================
 set BASE=C:\Users\ADMIN\Documents\BizFlowApp
 
@@ -16,26 +16,15 @@ echo [OK] All pages updated
 
 cd /d "%BASE%"
 git add .
-git commit -m "Premium white/red design - maroon sidebar, consolidated hub pages"
+git commit -m "7SQ Premium - white/red theme, maroon sidebar, hub pages"
 git push origin master
 
 echo.
 echo ============================================
-echo  Done! Premium design applied:
-echo    White background + Red/Maroon theme
-echo    Consolidated sidebar (18 items)
-echo    Hub pages with tab navigation:
-echo      Inventory (8 tabs)
-echo      Sales (5 tabs)
-echo      Customers (7 tabs)
-echo      Purchases (5 tabs)
-echo      HR ^& Payroll (8 tabs)
-echo      GST ^& Tax (5 tabs)
-echo      Accounting (5 tabs)
-echo      Loyalty ^& CRM (6 tabs)
-echo      Marketing (9 tabs)
-echo      Operations (10 tabs)
-echo      AI Tools (2 tabs)
-echo      Tools ^& Admin (8 tabs)
+echo  7SQ Business Platform deployed!
+echo  - White background, red accents
+echo  - Maroon sidebar (#7B1E1E)
+echo  - 18 sidebar items (was 88)
+echo  - 12 hub pages with tabs
 echo ============================================
 pause

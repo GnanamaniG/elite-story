@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { HubTabs, HubHeader } from './_HubShell';
+import { HubTabs, HubHeader } from './HubShell';
 import Purchases       from './Purchases';
 import PurchaseOrders  from './PurchaseOrders';
 import Suppliers       from './Suppliers';

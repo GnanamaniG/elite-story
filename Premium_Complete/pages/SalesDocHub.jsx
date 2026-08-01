@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { HubTabs, HubHeader } from './_HubShell';
+import { HubTabs, HubHeader } from './HubShell';
 import Quotations    from './Quotations';
 import EMIManager    from './EMIManager';
 import EWayBill      from './EWayBill';

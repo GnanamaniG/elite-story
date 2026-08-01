@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { HubTabs, HubHeader } from './_HubShell';
+import { HubTabs, HubHeader } from './HubShell';
 import GSTFiling   from './GSTFiling';
 import GSTR3B      from './GSTR3B';
 import TDSManagement from './TDSManagement';

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { HubTabs, HubHeader } from './_HubShell';
+import { HubTabs, HubHeader } from './HubShell';
 import Campaigns      from './Campaigns';
 import WhatsAppCatalog from './WhatsAppCatalog';
 import WAOrderBot     from './WAOrderBot';

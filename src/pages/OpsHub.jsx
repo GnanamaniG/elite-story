@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { HubTabs, HubHeader } from './_HubShell';
+import { HubTabs, HubHeader } from './HubShell';
 import Branches      from './Branches';
 import CashRegister  from './CashRegister';
 import EODReport     from './EODReport';

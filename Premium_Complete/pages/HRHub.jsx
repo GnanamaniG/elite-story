@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { HubTabs, HubHeader } from './_HubShell';
+import { HubTabs, HubHeader } from './HubShell';
 import Attendance     from './Attendance';
 import Payroll        from './Payroll';
 import LeaveManagement from './LeaveManagement';
