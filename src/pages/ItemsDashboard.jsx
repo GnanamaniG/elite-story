@@ -37,7 +37,7 @@ function tagsFor(item) {
   return [...new Set(tags)];
 }
 
-export default function ItemsDashboard({ tenant, role='owner' }) {
+export default function ItemsDashboard({ tenant, role='owner', onSwitchTab }) {
   const [inventory, setInventory] = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [view,      setView]      = useState('products'); // products | services | all
@@ -55,11 +55,15 @@ export default function ItemsDashboard({ tenant, role='owner' }) {
 
   useEffect(() => { if (tenant?.id) load(); }, [tenant?.id]);
 
+  const REVENUE_WINDOW_DAYS = 180;
+
   async function load() {
     setLoading(true);
+    const since = new Date(); since.setDate(since.getDate() - REVENUE_WINDOW_DAYS);
     const [invRes, salesRes] = await Promise.all([
       supabase.from('inventory').select('*').eq('tenant_id', tenant.id).eq('active', true).order('name'),
-      supabase.from('sales').select('items,date').eq('tenant_id', tenant.id).order('date',{ ascending:false }).limit(2000),
+      supabase.from('sales').select('items,date').eq('tenant_id', tenant.id)
+        .gte('date', since.toISOString().slice(0,10)).order('date',{ ascending:false }),
     ]);
     const inv   = invRes.data || [];
     const sales = salesRes.data || [];
@@ -122,42 +126,68 @@ export default function ItemsDashboard({ tenant, role='owner' }) {
     await load();
   }
 
-  // ── Derived data ──────────────────────────────────────────
-  const products = inventory.filter(i => (i.type||'product')==='product');
-  const services  = inventory.filter(i => i.type==='service');
+  // ── Derived data — memoized so a keystroke in Search doesn't
+  //    re-walk the whole catalog to recompute KPIs and tag counts ──
+  const products = useMemo(() => inventory.filter(i => (i.type||'product')==='product'), [inventory]);
+  const services  = useMemo(() => inventory.filter(i => i.type==='service'), [inventory]);
   const base = view==='products' ? products : view==='services' ? services : inventory;
 
-  const categories = ['all', ...new Set(inventory.map(i=>i.cat).filter(Boolean))];
+  const categories = useMemo(
+    () => ['all', ...new Set(inventory.map(i=>i.cat).filter(Boolean))],
+    [inventory]
+  );
 
-  const displayed = base
+  // Debounce search so fast typing doesn't filter on every keystroke
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search), 200);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const displayed = useMemo(() => base
     .filter(i => catFilter==='all' || i.cat===catFilter)
     .filter(i => tagFilter==='all' || (i.aiTags||[]).includes(tagFilter))
     .filter(i => stockFilter==='all'
       || (stockFilter==='in'  && (i.stock||0) > (i.alert||10))
       || (stockFilter==='low' && (i.stock||0) > 0 && (i.stock||0) <= (i.alert||10))
       || (stockFilter==='out' && (i.stock||0) <= 0))
-    .filter(i => !search
-      || i.name.toLowerCase().includes(search.toLowerCase())
-      || (i.code||'').toLowerCase().includes(search.toLowerCase())
-      || (i.cat||'').toLowerCase().includes(search.toLowerCase()))
+    .filter(i => !debouncedSearch
+      || i.name.toLowerCase().includes(debouncedSearch.toLowerCase())
+      || (i.code||'').toLowerCase().includes(debouncedSearch.toLowerCase())
+      || (i.cat||'').toLowerCase().includes(debouncedSearch.toLowerCase()))
     .sort((a,b)=> sortBy==='revenue' ? (b.revenue||0)-(a.revenue||0)
                : sortBy==='margin'  ? (b.sp>0?(b.sp-b.cp)/b.sp:0)-(a.sp>0?(a.sp-a.cp)/a.sp:0)
                : sortBy==='stock'   ? (b.stock||0)-(a.stock||0)
                : sortBy==='sold'    ? (b.sold||0)-(a.sold||0)
-               : a.name.localeCompare(b.name));
+               : a.name.localeCompare(b.name)),
+    [base, catFilter, tagFilter, stockFilter, debouncedSearch, sortBy]
+  );
 
-  // KPIs
-  const totalUnits    = inventory.reduce((s,i)=>s+(i.stock||0),0);
-  const invValue       = inventory.reduce((s,i)=>s+(i.stock||0)*(i.cp||0),0);
-  const catalogueRev   = inventory.reduce((s,i)=>s+(i.revenue||0),0);
-  const avgMargin      = inventory.length ? inventory.reduce((s,i)=> s + (i.sp>0?(i.sp-i.cp)/i.sp*100:0), 0)/inventory.length : 0;
-  const inStock        = inventory.filter(i=>(i.stock||0) > (i.alert||10)).length;
-  const lowStock       = inventory.filter(i=>(i.stock||0) > 0 && (i.stock||0) <= (i.alert||10)).length;
-  const outStock       = inventory.filter(i=>(i.stock||0) <= 0).length;
-  const topByRev       = [...inventory].sort((a,b)=>(b.revenue||0)-(a.revenue||0))[0];
-  const avgUnitValue   = totalUnits>0 ? invValue/totalUnits : 0;
+  // Cap DOM rows for very large catalogues; "Show all" lifts the cap on demand
+  const PAGE_SIZE = 150;
+  const [showAll, setShowAll] = useState(false);
+  const visibleRows = showAll ? displayed : displayed.slice(0, PAGE_SIZE);
 
-  const tagCounts = Object.keys(TAGS).reduce((a,k)=>({ ...a, [k]: inventory.filter(i=>(i.aiTags||[]).includes(k)).length }), {});
+  // KPIs — recomputed only when the catalogue itself changes, not on filter/search
+  const kpis = useMemo(() => {
+    const totalUnits  = inventory.reduce((s,i)=>s+(i.stock||0),0);
+    const invValue     = inventory.reduce((s,i)=>s+(i.stock||0)*(i.cp||0),0);
+    const catalogueRev = inventory.reduce((s,i)=>s+(i.revenue||0),0);
+    const avgMargin    = inventory.length
+      ? inventory.reduce((s,i)=> s + (i.sp>0?(i.sp-i.cp)/i.sp*100:0), 0)/inventory.length : 0;
+    const inStock  = inventory.filter(i=>(i.stock||0) > (i.alert||10)).length;
+    const lowStock = inventory.filter(i=>(i.stock||0) > 0 && (i.stock||0) <= (i.alert||10)).length;
+    const outStock = inventory.filter(i=>(i.stock||0) <= 0).length;
+    const topByRev = [...inventory].sort((a,b)=>(b.revenue||0)-(a.revenue||0))[0];
+    return { totalUnits, invValue, catalogueRev, avgMargin, inStock, lowStock, outStock,
+             topByRev, avgUnitValue: totalUnits>0 ? invValue/totalUnits : 0 };
+  }, [inventory]);
+  const { totalUnits, invValue, catalogueRev, avgMargin, inStock, lowStock, outStock, topByRev, avgUnitValue } = kpis;
+
+  const tagCounts = useMemo(
+    () => Object.keys(TAGS).reduce((a,k)=>({ ...a, [k]: inventory.filter(i=>(i.aiTags||[]).includes(k)).length }), {}),
+    [inventory]
+  );
 
   const KPI = ({ label, value, sub, icon, color }) => (
     <div style={{ background:T.white, border:`1px solid ${T.bdr}`, borderRadius:12, padding:'14px 16px', boxShadow:'0 1px 4px rgba(0,0,0,.05)' }}>
@@ -179,20 +209,21 @@ export default function ItemsDashboard({ tenant, role='owner' }) {
           <div style={{ fontSize:20, fontWeight:900, color:T.darkRed, letterSpacing:'-0.02em' }}>Items &amp; Products</div>
           <div style={{ fontSize:12, color:T.sub, marginTop:3 }}>
             {products.length} products · {services.length} services · {totalUnits.toLocaleString('en-IN')} units · {fmtL(invValue)} inventory value
+            <span style={{ color:T.muted }}> · revenue based on last {REVENUE_WINDOW_DAYS} days</span>
             {saved && <span style={{ color:T.green, fontWeight:700, marginLeft:8 }}>✓ Saved</span>}
           </div>
         </div>
         <div style={{ display:'flex', gap:8, flexWrap:'wrap' }}>
-          <button onClick={runAiTag} style={btn(T.darkRed, T.white)}>✨ AI Tag</button>
-          <button onClick={()=>alert('Use Inventory → Barcode Generator tab for bulk barcode printing')} style={btn('#7C2D2D', T.white)}>▦ Barcodes</button>
-          <button onClick={()=>alert('Use Inventory → Bulk Import tab')} style={btn(T.bg, T.sub, { border:`1px solid ${T.bdr}` })}>↑ Bulk</button>
+          <button onClick={runAiTag} disabled={loading} style={btn(T.darkRed, T.white)}>✨ AI Tag</button>
+          <button onClick={()=>onSwitchTab?.('barcode')} style={btn('#7C2D2D', T.white)}>▦ Barcodes</button>
+          <button onClick={()=>onSwitchTab?.('import')} style={btn(T.bg, T.sub, { border:`1px solid ${T.bdr}` })}>↑ Bulk</button>
           <button onClick={()=>openNew('product')} style={btn(T.red, T.white)}>+ Product</button>
           <button onClick={()=>openNew('service')} style={btn(T.purple, T.white)}>+ Service</button>
         </div>
       </div>
 
       {/* KPI strip */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(6,1fr)', gap:11, marginBottom:16 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))', gap:11, marginBottom:16 }}>
         <KPI label="Catalogue Revenue" value={fmtL(catalogueRev)} sub={topByRev?`Top: ${topByRev.name.slice(0,18)}`:''} icon="📈" color={T.green}/>
         <KPI label="Inventory Value"   value={fmtL(invValue)} sub={`${totalUnits.toLocaleString('en-IN')} units · avg ${fmt(avgUnitValue)}`} icon="🏦"/>
         <KPI label="Avg Margin"        value={`${avgMargin.toFixed(0)}%`} sub="across all items" icon="📊" color={avgMargin>=40?T.green:T.amber}/>
@@ -249,12 +280,20 @@ export default function ItemsDashboard({ tenant, role='owner' }) {
               ))}
             </tr></thead>
             <tbody>
-              {loading?<tr><td colSpan={11} style={{ textAlign:'center', padding:50, color:T.muted }}>Loading catalogue…</td></tr>
-              :displayed.length===0?<tr><td colSpan={11} style={{ textAlign:'center', padding:50 }}>
+              {loading?Array.from({length:6}).map((_,i)=>(
+                <tr key={'sk'+i}>
+                  {Array.from({length:11}).map((_,j)=>(
+                    <td key={j} style={{ padding:'12px' }}>
+                      <div style={{ height:14, background:'linear-gradient(90deg,#F0E8E8 25%,#F8F0F0 50%,#F0E8E8 75%)', backgroundSize:'200% 100%', animation:'skelShine 1.4s ease-in-out infinite', borderRadius:5, width: j===0?'70%':'50%' }}/>
+                    </td>
+                  ))}
+                </tr>
+              ))
+              :visibleRows.length===0?<tr><td colSpan={11} style={{ textAlign:'center', padding:50 }}>
                 <div style={{ fontSize:34, marginBottom:8 }}>📦</div>
                 <div style={{ color:T.muted, fontWeight:600 }}>No items match these filters</div>
               </td></tr>
-              :displayed.map(it=>{
+              :visibleRows.map(it=>{
                 const margin = it.sp>0 ? Math.round((it.sp-it.cp)/it.sp*100) : 0;
                 const stockPct = it.alert ? Math.min(100, (it.stock||0)/(it.alert*4)*100) : 60;
                 const stockColor = (it.stock||0)<=0 ? T.red : (it.stock||0)<=(it.alert||10) ? T.amber : T.green;
@@ -308,7 +347,7 @@ export default function ItemsDashboard({ tenant, role='owner' }) {
         </div>
       ) : (
         <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(210px,1fr))', gap:12 }}>
-          {displayed.map(it=>{
+          {visibleRows.map(it=>{
             const margin = it.sp>0 ? Math.round((it.sp-it.cp)/it.sp*100) : 0;
             return (
               <div key={it.id} style={{ background:T.white, border:`1px solid ${T.bdr}`, borderRadius:12, padding:14, boxShadow:'0 1px 4px rgba(0,0,0,.05)' }}>
@@ -325,6 +364,15 @@ export default function ItemsDashboard({ tenant, role='owner' }) {
               </div>
             );
           })}
+        </div>
+      )}
+
+      {displayed.length > PAGE_SIZE && (
+        <div style={{ textAlign:'center', margin:'12px 0' }}>
+          <button onClick={()=>setShowAll(s=>!s)}
+            style={{ ...btn(T.white, T.red, { border:`1px solid ${T.bdr}`, padding:'9px 20px' }) }}>
+            {showAll ? `Show fewer` : `Show all ${displayed.length} items (${displayed.length-PAGE_SIZE} more)`}
+          </button>
         </div>
       )}
 

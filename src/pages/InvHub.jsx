@@ -43,7 +43,7 @@ export default function InvHub({ tenant, deepTab, role = 'owner' }) {
       <HubHeader title="Inventory" subtitle="Products, pricing, valuation, adjustments and labels" icon="📦"/>
       <HubTabs tabs={visibleTabs} active={tab} onChange={setTab}/>
       <div style={{ flex:1, overflow:'auto', background:'#F7F3F3' }}>
-        {tab==='products'  && <ItemsDashboard   tenant={tenant} role={role}/>}
+        {tab==='products'  && <ItemsDashboard   tenant={tenant} role={role} onSwitchTab={setTab}/>}
         {tab==='variants'  && <Variants         tenant={tenant}/>}
         {tab==='prices'    && <PriceLists       tenant={tenant}/>}
         {tab==='history'   && <PriceHistory     tenant={tenant}/>}
