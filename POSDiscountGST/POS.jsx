@@ -300,28 +300,10 @@ export default function POS({ tenant, activeBranch, user }) {
     if (!newCust.name.trim()) return;
     setSavingCust(true);
     try {
-      const digits = newCust.phone.replace(/\D/g,'');
-      // Check for an existing customer with this same number (any formatting)
-      // before creating a new one — the database also enforces this, but
-      // checking here first gives a friendly message instead of a raw error.
-      if (digits.length >= 10) {
-        const existing = customers.find(c => (c.phone||'').replace(/\D/g,'') === digits);
-        if (existing) {
-          setCustomer(existing);
-          setShowNewCust(false); setCustSearch('');
-          setNewCust({ name:'', phone:'', email:'' });
-          alert(`${existing.name} is already registered with this number — selected them instead of creating a duplicate.`);
-          setSavingCust(false);
-          return;
-        }
-      }
       const { data, error } = await supabase.from('customers')
         .insert({ tenant_id:tenant.id, name:newCust.name.trim(), phone:newCust.phone.trim()||null, email:newCust.email.trim()||null })
         .select().single();
-      if (error) {
-        if (/duplicate|unique/i.test(error.message)) throw new Error('This phone number is already registered to another customer.');
-        throw error;
-      }
+      if (error) throw error;
       setCustomers(prev=>[...prev, data]);
       setCustomer(data);
       setShowNewCust(false); setCustSearch('');
@@ -469,7 +451,7 @@ export default function POS({ tenant, activeBranch, user }) {
 
                 {custSearch&&(
                   <div style={{ position:'absolute', top:'100%', left:0, right:0, background:T.srf,
-                                border:`1px solid ${T.bdr}`, borderRadius:9, zIndex:200, maxHeight:230, overflowY:'auto',
+                                border:`1px solid ${T.bdr}`, borderRadius:9, zIndex:50, maxHeight:230, overflowY:'auto',
                                 marginTop:5, boxShadow:'0 8px 28px rgba(0,0,0,.16)' }}>
                     {custFiltered.length>0
                       ? custFiltered.slice(0,8).map(cu=>(

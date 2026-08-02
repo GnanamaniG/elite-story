@@ -108,8 +108,30 @@ export default function PartiesDashboard({ tenant, role='owner', onSwitchTab, in
     const payload = form.kind==='customer'
       ? { tenant_id:tenant.id, name:form.name, phone:form.phone||null, email:form.email||null, gstin:form.gstin||null, address:form.address||null }
       : { tenant_id:tenant.id, name:form.name, phone:form.phone||null, email:form.email||null, gstin:form.gstin||null, address:form.address||null, payment_terms:parseInt(form.payment_terms)||30, active:true };
-    if (editParty) await supabase.from(table).update(payload).eq('id', editParty.id);
-    else           await supabase.from(table).insert(payload);
+
+    // Adding a new customer: check for an existing one with the same
+    // number (any formatting) first, so this doesn't silently create
+    // a duplicate person the way POS's quick-add used to.
+    if (!editParty && form.kind==='customer') {
+      const digits = (form.phone||'').replace(/\D/g,'');
+      if (digits.length >= 10) {
+        const dupe = customers.find(c => (c.phone||'').replace(/\D/g,'') === digits);
+        if (dupe) {
+          alert(`${dupe.name} is already registered with this number — no new record created.`);
+          setShowForm(false); resetForm(form.kind); setSaving(false);
+          return;
+        }
+      }
+    }
+
+    let err = null;
+    if (editParty) ({ error: err } = await supabase.from(table).update(payload).eq('id', editParty.id));
+    else           ({ error: err } = await supabase.from(table).insert(payload));
+    if (err) {
+      alert(/duplicate|unique/i.test(err.message) ? 'This phone number is already registered to another customer.' : 'Could not save: '+err.message);
+      setSaving(false);
+      return;
+    }
     setShowForm(false); resetForm(form.kind);
     setSaved(true); setTimeout(()=>setSaved(false), 2500);
     await load(); setSaving(false);
