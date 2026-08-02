@@ -34,7 +34,7 @@ export default function LoyaltyTiers({ tenant }) {
     setLoading(true);
     const [tierRes, custRes] = await Promise.all([
       supabase.from('loyalty_tiers').select('*').eq('tenant_id', tenant.id).order('min_spend'),
-      supabase.from('customers').select('id,name,total_spent,loyalty_points,segment').eq('tenant_id', tenant.id),
+      supabase.from('customers').select('id,name,total_spent,loyalty_pts,segment').eq('tenant_id', tenant.id),
     ]);
     setTiers(tierRes.data||[]);
     setCustomers(custRes.data||[]);
@@ -145,7 +145,7 @@ export default function LoyaltyTiers({ tenant }) {
                   <td style={{ padding:'9px 14px', color:T.ink }}>{c.name}</td>
                   <td style={{ padding:'9px 14px', color:T.blue, fontWeight:600 }}>{fmt(c.total_spent||0)}</td>
                   <td style={{ padding:'9px 14px' }}><span style={{ background:(tier.color||T.muted)+'22', color:tier.color||T.muted, borderRadius:5, padding:'2px 8px', fontSize:10, fontWeight:700 }}>{tier.icon} {tier.name}</span></td>
-                  <td style={{ padding:'9px 14px', color:T.amber }}>{(c.loyalty_points||0).toLocaleString('en-IN')} pts</td>
+                  <td style={{ padding:'9px 14px', color:T.amber }}>{(c.loyalty_pts||0).toLocaleString('en-IN')} pts</td>
                   <td style={{ padding:'9px 14px', color:T.muted }}>{nextTier?`${nextTier.icon} ${nextTier.name}`:'🏆 Max Tier'}</td>
                   <td style={{ padding:'9px 14px', color:gap>0?T.red:T.green, fontWeight:600 }}>{gap>0?fmt(gap)+' more':'✅ Achieved'}</td>
                 </tr>

@@ -30,7 +30,7 @@ export default function Referrals({ tenant }) {
     setLoading(true);
     const [refRes, custRes] = await Promise.all([
       supabase.from('referrals').select('*').eq('tenant_id', tenant.id).order('created_at', { ascending:false }),
-      supabase.from('customers').select('id,name,phone,loyalty_points').eq('tenant_id', tenant.id).order('name'),
+      supabase.from('customers').select('id,name,phone,loyalty_pts').eq('tenant_id', tenant.id).order('name'),
     ]);
     setReferrals(refRes.data||[]);
     setCustomers(custRes.data||[]);
@@ -55,7 +55,7 @@ export default function Referrals({ tenant }) {
     if (ref.referrer_id && settings.reward_type==='points') {
       const cust = customers.find(c=>c.id===ref.referrer_id);
       if (cust) {
-        await supabase.from('customers').update({ loyalty_points:(cust.loyalty_points||0)+settings.referrer_bonus }).eq('id', ref.referrer_id);
+        await supabase.from('customers').update({ loyalty_pts:(cust.loyalty_pts||0)+settings.referrer_bonus }).eq('id', ref.referrer_id);
         await supabase.from('loyalty_txns').insert({ tenant_id:tenant.id, customer_id:ref.referrer_id, type:'earn', points:settings.referrer_bonus, description:'Referral reward' });
       }
     }

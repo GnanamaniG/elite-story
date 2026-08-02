@@ -36,7 +36,7 @@ export default function CustomerApp({ tenant }) {
     const cust = custRes.data;
     setCustomer(cust);
     const custLoyalty = (loyaltyRes.data||[]).filter(t => t.customer_id === cust.id);
-    setLoyalty({ txns: custLoyalty, balance: cust.loyalty_points || 0 });
+    setLoyalty({ txns: custLoyalty, balance: cust.loyalty_pts || 0 });
     const salesRes = await supabase.from('sales').select('*').eq('tenant_id', tenant.id).eq('customer_id', cust.id).order('date', { ascending:false }).limit(20);
     setSales(salesRes.data||[]);
     setPromos(promosRes.data||[]);
@@ -52,7 +52,7 @@ export default function CustomerApp({ tenant }) {
 
   function shareOnWhatsApp() {
     if (!customer) return;
-    const msg = `Hi ${customer.name}! 👋\n\nYour loyalty status at *${tenant?.name||'Elite Store'}*:\n\n⭐ Points Balance: *${customer.loyalty_points||0} pts*\n💰 Total Spent: *${fmt(customer.total_spent||0)}*\n🛍️ Total Orders: *${customer.purchase_count||0}*\n\nCheck your account: ${window.location.origin}/customer-app\n\nThank you for being our valued customer! 🙏`;
+    const msg = `Hi ${customer.name}! 👋\n\nYour loyalty status at *${tenant?.name||'Elite Store'}*:\n\n⭐ Points Balance: *${customer.loyalty_pts||0} pts*\n💰 Total Spent: *${fmt(customer.total_spent||0)}*\n🛍️ Total Orders: *${customer.purchase_count||0}*\n\nCheck your account: ${window.location.origin}/customer-app\n\nThank you for being our valued customer! 🙏`;
     const ph = (customer.phone||'').replace(/\D/g,'').replace(/^0/,'91');
     window.open(`https://wa.me/${ph}?text=${encodeURIComponent(msg)}`, '_blank');
   }
@@ -105,8 +105,8 @@ export default function CustomerApp({ tenant }) {
               </div>
               <div style={{ textAlign:'right' }}>
                 <div style={{ fontSize:11, color:T.muted }}>Loyalty Points</div>
-                <div style={{ fontSize:32, fontWeight:900, color:T.amber }}>⭐ {customer.loyalty_points||0}</div>
-                <div style={{ fontSize:11, color:T.green }}>≈ {fmt((customer.loyalty_points||0)*pointValue)} value</div>
+                <div style={{ fontSize:32, fontWeight:900, color:T.amber }}>⭐ {customer.loyalty_pts||0}</div>
+                <div style={{ fontSize:11, color:T.green }}>≈ {fmt((customer.loyalty_pts||0)*pointValue)} value</div>
               </div>
             </div>
             <div style={{ display:'grid', gridTemplateColumns:'repeat(3,1fr)', gap:10, marginTop:16 }}>

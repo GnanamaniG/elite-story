@@ -42,7 +42,7 @@ export default function AIAnalytics({ tenant }) {
       supabase.from('sales').select('total,items,payment_mode,customer,date,gst_amount').eq('tenant_id', tenant.id).gte('date', mStart).lte('date', today),
       supabase.from('expenses').select('amount,category,date').eq('tenant_id', tenant.id).gte('date', mStart),
       supabase.from('inventory').select('name,cat,stock,sp,cp,alert').eq('tenant_id', tenant.id).eq('active', true),
-      supabase.from('customers').select('name,total_spent,segment,purchase_count,loyalty_points').eq('tenant_id', tenant.id),
+      supabase.from('customers').select('name,total_spent,segment,purchase_count,loyalty_pts').eq('tenant_id', tenant.id),
     ]);
 
     const sales    = salesRes.data||[];

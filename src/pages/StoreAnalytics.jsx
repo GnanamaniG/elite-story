@@ -72,7 +72,7 @@ export default function StoreAnalytics({ tenant }) {
       supabase.from('sales').select('total,date').eq('tenant_id',tenant.id).gte('date',threeMonthsAgo),
       supabase.from('expenses').select('amount,date').eq('tenant_id',tenant.id).gte('date',thisMonthStart),
       supabase.from('inventory').select('stock,alert,sp,cp,active').eq('tenant_id',tenant.id),
-      supabase.from('customers').select('id,outstanding,total_spent,loyalty_points,segment').eq('tenant_id',tenant.id),
+      supabase.from('customers').select('id,outstanding,total_spent,loyalty_pts,segment').eq('tenant_id',tenant.id),
     ]);
 
     const thisSales = thisRes.data||[];

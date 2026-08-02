@@ -94,7 +94,7 @@ export default function POS({ tenant, activeBranch, user }) {
     try {
       const [inv, custs, promos] = await Promise.all([
         supabase.from('inventory').select('*').eq('tenant_id', tenant.id).eq('active', true).order('name'),
-        supabase.from('customers').select('id,name,phone,loyalty_points,outstanding,total_spent,purchase_count').eq('tenant_id', tenant.id).order('name'),
+        supabase.from('customers').select('id,name,phone,loyalty_pts,outstanding,total_spent,purchase_count').eq('tenant_id', tenant.id).order('name'),
         supabase.from('promo_codes').select('*').eq('tenant_id', tenant.id).eq('active', true),
       ]);
       setInventory(inv.data||[]);
@@ -240,7 +240,7 @@ export default function POS({ tenant, activeBranch, user }) {
         if (earnPts > 0 || loyaltyRedeem > 0) {
           if (earnPts > 0) await supabase.from('loyalty_txns').insert({ tenant_id:tenant.id, customer_id:customer.id, type:'earn', points:earnPts, sale_id:sale.id });
           if (loyaltyRedeem > 0) await supabase.from('loyalty_txns').insert({ tenant_id:tenant.id, customer_id:customer.id, type:'redeem', points:-loyaltyRedeem, sale_id:sale.id });
-          await supabase.from('customers').update({ loyalty_points:Math.max(0,(customer.loyalty_points||0)+earnPts-loyaltyRedeem), total_spent:(customer.total_spent||0)+total, purchase_count:(customer.purchase_count||0)+1, last_purchase:new Date().toISOString().slice(0,10) }).eq('id', customer.id);
+          await supabase.from('customers').update({ loyalty_pts:Math.max(0,(customer.loyalty_pts||0)+earnPts-loyaltyRedeem), total_spent:(customer.total_spent||0)+total, purchase_count:(customer.purchase_count||0)+1, last_purchase:new Date().toISOString().slice(0,10) }).eq('id', customer.id);
         }
       }
 
@@ -454,7 +454,7 @@ export default function POS({ tenant, activeBranch, user }) {
           <div style={{ marginBottom:12 }}>
             <div style={{ fontSize:11, color:T.sub, fontWeight:700, textTransform:'uppercase', marginBottom:6 }}>Customer</div>
             {customer?(<div style={{ background:T.card, borderRadius:9, padding:'10px 12px', display:'flex', justifyContent:'space-between', alignItems:'center' }}>
-              <div><div style={{ fontSize:13, fontWeight:700, color:T.ink }}>{customer.name}</div><div style={{ fontSize:11, color:T.amber }}>⭐ {customer.loyalty_points||0} pts · {fmt(customer.total_spent||0)} spent</div></div>
+              <div><div style={{ fontSize:13, fontWeight:700, color:T.ink }}>{customer.name}</div><div style={{ fontSize:11, color:T.amber }}>⭐ {customer.loyalty_pts||0} pts · {fmt(customer.total_spent||0)} spent</div></div>
               <button onClick={()=>{setCustomer(null);setLoyaltyRedeem(0);}} style={{ background:'none', border:'none', color:T.muted, cursor:'pointer', fontSize:18 }}>×</button>
             </div>):(
               <div style={{ position:'relative' }}>
@@ -481,7 +481,7 @@ export default function POS({ tenant, activeBranch, user }) {
                               <div style={{ fontSize:13, color:T.ink, fontWeight:600 }}>{cu.name}</div>
                               <div style={{ fontSize:11, color:T.muted }}>{cu.phone||'No phone'}</div>
                             </div>
-                            <span style={{ fontSize:10, color:T.amber, fontWeight:700 }}>⭐{cu.loyalty_points||0}</span>
+                            <span style={{ fontSize:10, color:T.amber, fontWeight:700 }}>⭐{cu.loyalty_pts||0}</span>
                           </div>
                         ))
                       : (
@@ -504,10 +504,10 @@ export default function POS({ tenant, activeBranch, user }) {
           </div>
 
           {/* Loyalty redeem */}
-          {customer&&(customer.loyalty_points||0)>0&&(<div style={{ background:T.amber+'12', border:`1px solid ${T.amber}44`, borderRadius:9, padding:'10px 12px', marginBottom:12 }}>
+          {customer&&(customer.loyalty_pts||0)>0&&(<div style={{ background:T.amber+'12', border:`1px solid ${T.amber}44`, borderRadius:9, padding:'10px 12px', marginBottom:12 }}>
             <div style={{ fontSize:11, color:T.amber, fontWeight:700, marginBottom:6 }}>⭐ Redeem Points (max 10%)</div>
             <div style={{ display:'flex', gap:8, alignItems:'center' }}>
-              <input type="number" min={0} max={customer.loyalty_points||0} value={loyaltyRedeem} onChange={e=>setLoyaltyRedeem(parseInt(e.target.value)||0)} style={{ width:80, background:T.card, border:`1px solid ${T.bdr}`, borderRadius:6, padding:'6px 8px', color:T.ink, fontSize:12, fontFamily:'inherit', outline:'none', textAlign:'center' }}/>
+              <input type="number" min={0} max={customer.loyalty_pts||0} value={loyaltyRedeem} onChange={e=>setLoyaltyRedeem(parseInt(e.target.value)||0)} style={{ width:80, background:T.card, border:`1px solid ${T.bdr}`, borderRadius:6, padding:'6px 8px', color:T.ink, fontSize:12, fontFamily:'inherit', outline:'none', textAlign:'center' }}/>
               <span style={{ fontSize:11, color:T.muted }}>pts = {fmt(loyaltyDisc)} off</span>
             </div>
           </div>)}
