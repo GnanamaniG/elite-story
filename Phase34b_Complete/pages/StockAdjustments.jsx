@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { canSee } from '../lib/roleAccess';
 import { supabase } from '../lib/supabase';
 
 const T = {
@@ -21,7 +22,8 @@ const ADJ_TYPES = {
   found:             { label:'Found / Extra',     icon:'✨', color:'#16A34A', bg:'#F0FDF4', sign:1  },
 };
 
-export default function StockAdjustments({ tenant }) {
+export default function StockAdjustments({ tenant, role='owner' }) {
+  const showCost = canSee(role, 'costPrice');
   const [adjustments, setAdjustments] = useState([]);
   const [inventory,   setInventory]   = useState([]);
   const [loading,     setLoading]     = useState(true);
@@ -208,7 +210,7 @@ export default function StockAdjustments({ tenant }) {
                 return (
                   <div style={{ background:cfg.bg, border:`1px solid ${cfg.color}33`, borderRadius:9, padding:'11px 14px', marginBottom:14, fontSize:12 }}>
                     <div style={{ display:'flex', justifyContent:'space-between', marginBottom:3 }}><span style={{ color:T.sub }}>Stock: {item?.stock||0} → <strong style={{ color:cfg.color }}>{after}</strong></span></div>
-                    <div style={{ display:'flex', justifyContent:'space-between' }}><span style={{ color:T.sub }}>Cost impact</span><strong style={{ color:cfg.color }}>{chg<0?'-':'+'}{fmt(cost)}</strong></div>
+                    {showCost && <div style={{ display:'flex', justifyContent:'space-between' }}><span style={{ color:T.sub }}>Cost impact</span><strong style={{ color:cfg.color }}>{chg<0?'-':'+'}{fmt(cost)}</strong></div>}
                   </div>
                 );
               })()}

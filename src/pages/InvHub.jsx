@@ -50,9 +50,9 @@ export default function InvHub({ tenant, deepTab, role = 'owner' }) {
         {tab==='prices'    && <PriceLists       tenant={tenant}/>}
         {tab==='history'   && <PriceHistory     tenant={tenant}/>}
         {tab==='valuation' && <StockValuation   tenant={tenant}/>}
-        {tab==='batches'   && <BatchExpiryTracker tenant={tenant}/>}
+        {tab==='batches'   && <BatchExpiryTracker tenant={tenant} role={role}/>}
         {tab==='serials'   && <SerialRegistry     tenant={tenant} role={role}/>}
-        {tab==='adjust'    && <StockAdjustments tenant={tenant}/>}
+        {tab==='adjust'    && <StockAdjustments tenant={tenant} role={role}/>}
         {tab==='audit'     && <StockAudit       tenant={tenant}/>}
         {tab==='transfer'  && <StockTransferOrders tenant={tenant}/>}
         {tab==='reorder'   && <ReorderManagement tenant={tenant}/>}

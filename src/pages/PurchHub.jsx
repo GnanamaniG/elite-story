@@ -40,7 +40,7 @@ export default function PurchHub({ tenant, deepTab, role = 'owner' }) {
         {tab==='history'     && <PurchasesDashboard   tenant={tenant} role={role} onSwitchTab={setTab}/>}
         {tab==='orders'      && <PurchaseOrders       tenant={tenant}/>}
         {tab==='scan'        && <BillScanner          tenant={tenant}/>}
-        {tab==='grn'         && <GoodsReceiptNote     tenant={tenant}/>}
+        {tab==='grn'         && <GoodsReceiptNote     tenant={tenant} role={role}/>}
         {tab==='requisitions'&& <PurchaseRequisitions tenant={tenant}/>}
         {tab==='suppliers'   && <PartiesDashboard      tenant={tenant} role={role} onSwitchTab={setTab} initialView='suppliers'/>}
         {tab==='payments'    && <SupplierPayments     tenant={tenant}/>}

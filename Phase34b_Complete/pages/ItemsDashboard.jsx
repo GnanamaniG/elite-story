@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { canSee } from '../lib/roleAccess';
 import { supabase } from '../lib/supabase';
 
 const T = {
@@ -38,6 +39,8 @@ function tagsFor(item) {
 }
 
 export default function ItemsDashboard({ tenant, role='owner', onSwitchTab }) {
+  const showCost = canSee(role, 'costPrice');
+  const showMargin = canSee(role, 'margin');
   const [inventory, setInventory] = useState([]);
   const [loading,   setLoading]   = useState(true);
   const [view,      setView]      = useState('products'); // products | services | all
@@ -227,7 +230,7 @@ export default function ItemsDashboard({ tenant, role='owner', onSwitchTab }) {
       <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(150px,1fr))', gap:11, marginBottom:16 }}>
         <KPI label="Catalogue Revenue" value={fmtL(catalogueRev)} sub={topByRev?`Top: ${topByRev.name.slice(0,18)}`:''} icon="📈" color={T.green}/>
         <KPI label="Inventory Value"   value={fmtL(invValue)} sub={`${totalUnits.toLocaleString('en-IN')} units · avg ${fmt(avgUnitValue)}`} icon="🏦"/>
-        <KPI label="Avg Margin"        value={`${avgMargin.toFixed(0)}%`} sub="across all items" icon="📊" color={avgMargin>=40?T.green:T.amber}/>
+        <KPI label="Avg Margin"        value={showMargin?`${avgMargin.toFixed(0)}%`:"🔒 Hidden"} sub={showMargin?"across all items":"restricted"} icon="📊" color={showMargin?(avgMargin>=40?T.green:T.amber):T.muted}/>
         <KPI label="In Stock"          value={inStock} sub="items healthy" icon="✅" color={T.green}/>
         <KPI label="Low Stock"         value={lowStock} sub="need reorder" icon="⚠️" color={T.amber}/>
         <KPI label="Out of Stock"      value={outStock} sub="urgent restock" icon="🔴" color={T.red}/>
@@ -258,7 +261,7 @@ export default function ItemsDashboard({ tenant, role='owner', onSwitchTab }) {
         </select>
         <select value={sortBy} onChange={e=>setSortBy(e.target.value)} style={{ ...inp, cursor:'pointer' }}>
           <option value="revenue">↓ Revenue</option>
-          <option value="margin">↓ Margin</option>
+          {showMargin && <option value="margin">↓ Margin</option>}
           <option value="stock">↓ Stock</option>
           <option value="sold">↓ Units Sold</option>
           <option value="name">A–Z Name</option>
@@ -312,10 +315,12 @@ export default function ItemsDashboard({ tenant, role='owner', onSwitchTab }) {
                       {it.mrp>it.sp && <div style={{ fontSize:10, color:T.muted, textDecoration:'line-through' }}>{fmt(it.mrp)}</div>}
                     </td>
                     <td style={{ padding:'10px 12px', textAlign:'right' }}>
-                      <div style={{ fontWeight:700, color: margin>=45?T.green:margin>=25?T.blue:T.amber }}>{margin}%</div>
-                      <div style={{ height:3, width:60, background:'#F3F4F6', borderRadius:2, marginTop:3, marginLeft:'auto' }}>
-                        <div style={{ height:'100%', width:`${Math.min(100,margin)}%`, background: margin>=45?T.green:margin>=25?T.blue:T.amber, borderRadius:2 }}/>
-                      </div>
+                      {showMargin ? <>
+                        <div style={{ fontWeight:700, color: margin>=45?T.green:margin>=25?T.blue:T.amber }}>{margin}%</div>
+                        <div style={{ height:3, width:60, background:'#F3F4F6', borderRadius:2, marginTop:3, marginLeft:'auto' }}>
+                          <div style={{ height:'100%', width:`${Math.min(100,margin)}%`, background: margin>=45?T.green:margin>=25?T.blue:T.amber, borderRadius:2 }}/>
+                        </div>
+                      </> : <span style={{ color:T.muted, fontSize:11 }}>🔒</span>}
                     </td>
                     <td style={{ padding:'10px 12px', textAlign:'right' }}>
                       <div style={{ fontWeight:800, color:stockColor }}>{it.stock||0}</div>
@@ -329,7 +334,7 @@ export default function ItemsDashboard({ tenant, role='owner', onSwitchTab }) {
                     <td style={{ padding:'10px 12px', textAlign:'right', color:T.green, fontWeight:800 }}>{it.revenue?fmtL(it.revenue):'—'}</td>
                     <td style={{ padding:'10px 12px' }}>
                       <div style={{ display:'flex', gap:4, flexWrap:'wrap', maxWidth:150 }}>
-                        {(it.aiTags||[]).map(tk=>{ const t=TAGS[tk]; return (
+                        {(it.aiTags||[]).filter(tk=>tk!=='HMG'||showMargin).map(tk=>{ const t=TAGS[tk]; return (
                           <span key={tk} style={{ background:t.bg, color:t.color, border:`1px solid ${t.bdr}`, borderRadius:5, padding:'2px 7px', fontSize:9, fontWeight:700, whiteSpace:'nowrap' }}>{t.icon} {t.l}</span>
                         );})}
                       </div>
@@ -355,7 +360,7 @@ export default function ItemsDashboard({ tenant, role='owner', onSwitchTab }) {
                 <div style={{ fontWeight:700, color:T.ink, fontSize:13, marginBottom:6, minHeight:34 }}>{it.name}</div>
                 <div style={{ display:'flex', justifyContent:'space-between', marginBottom:8 }}>
                   <span style={{ fontSize:16, fontWeight:900, color:T.green }}>{fmt(it.sp)}</span>
-                  <span style={{ fontSize:11, color: margin>=45?T.green:T.amber, fontWeight:700 }}>{margin}%</span>
+                  {showMargin && <span style={{ fontSize:11, color: margin>=45?T.green:T.amber, fontWeight:700 }}>{margin}%</span>}
                 </div>
                 <div style={{ display:'flex', flexWrap:'wrap', gap:4, marginBottom:8 }}>
                   {(it.aiTags||[]).map(tk=>{ const t=TAGS[tk]; return <span key={tk} style={{ background:t.bg, color:t.color, borderRadius:5, padding:'1px 6px', fontSize:9, fontWeight:700 }}>{t.icon}</span>; })}
@@ -402,9 +407,12 @@ export default function ItemsDashboard({ tenant, role='owner', onSwitchTab }) {
                 {[['SKU / Code','code'],['Category','cat'],['HSN Code','hsn'],['Unit','unit']].map(([lb,key])=>(
                   <div key={key}><label style={{ fontSize:10, color:T.sub, fontWeight:700, textTransform:'uppercase', display:'block', marginBottom:4 }}>{lb}</label><input value={form[key]} onChange={e=>setForm(f=>({...f,[key]:e.target.value}))} style={inp}/></div>
                 ))}
-                {[['Sale Price *','sp'],['Cost Price *','cp'],['MRP','mrp'],['GST %','gst']].map(([lb,key])=>(
+                {[['Sale Price *','sp'],['Cost Price *','cp'],['MRP','mrp'],['GST %','gst']]
+                  .filter(([,key])=>key!=='cp'||showCost)
+                  .map(([lb,key])=>(
                   <div key={key}><label style={{ fontSize:10, color:T.sub, fontWeight:700, textTransform:'uppercase', display:'block', marginBottom:4 }}>{lb}</label><input type="number" value={form[key]} onChange={e=>setForm(f=>({...f,[key]:e.target.value}))} required={lb.includes('*')} style={inp}/></div>
                 ))}
+                {!showCost && <div style={{ fontSize:10.5, color:T.muted, gridColumn:'1/-1' }}>Cost price is set by an owner or accountant — new items you add will show ₹0 cost until updated.</div>}
                 {form.type==='product'&&<>
                   <div><label style={{ fontSize:10, color:T.sub, fontWeight:700, textTransform:'uppercase', display:'block', marginBottom:4 }}>Stock Qty</label><input type="number" value={form.stock} onChange={e=>setForm(f=>({...f,stock:e.target.value}))} style={inp}/></div>
                   <div><label style={{ fontSize:10, color:T.sub, fontWeight:700, textTransform:'uppercase', display:'block', marginBottom:4 }}>Alert Level</label><input type="number" value={form.alert} onChange={e=>setForm(f=>({...f,alert:e.target.value}))} style={inp}/></div>
@@ -427,7 +435,7 @@ export default function ItemsDashboard({ tenant, role='owner', onSwitchTab }) {
                   </div>
                 </>}
               </div>
-              {form.sp&&form.cp&&<div style={{ background:T.lightRed, borderRadius:9, padding:'9px 13px', marginTop:12, fontSize:12, color:T.darkRed }}>
+              {showMargin && form.sp&&form.cp&&<div style={{ background:T.lightRed, borderRadius:9, padding:'9px 13px', marginTop:12, fontSize:12, color:T.darkRed }}>
                 Margin: <strong>{form.sp>0?Math.round((parseFloat(form.sp)-parseFloat(form.cp))/parseFloat(form.sp)*100):0}%</strong>
               </div>}
               <div style={{ display:'flex', gap:10, marginTop:20 }}>

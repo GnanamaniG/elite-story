@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
+import { canAccess } from '../lib/roleAccess';
 
 const T = {
   bg:'#F7F3F3', srf:'#FFFFFF', card:'#FFFFFF', bdr:'#E8DEDE',
@@ -39,10 +40,11 @@ function supplierGrade(pct) {
 }
 
 export default function PartiesDashboard({ tenant, role='owner', onSwitchTab, initialView='customers' }) {
+  const canSeeSuppliers = canAccess(role, 'purchhub');
   const [customers, setCustomers] = useState([]);
   const [suppliers, setSuppliers] = useState([]);
   const [loading,   setLoading]   = useState(true);
-  const [view,      setView]      = useState(initialView); // customers | suppliers | all
+  const [view,      setView]      = useState(canAccess(role,'purchhub') ? initialView : 'customers'); // customers | suppliers | all
   const [search,    setSearch]    = useState('');
   const [tierFilter,setTierFilter]= useState('all');
   const [sortBy,    setSortBy]    = useState('value');
@@ -53,7 +55,7 @@ export default function PartiesDashboard({ tenant, role='owner', onSwitchTab, in
   const [form, setForm] = useState({ kind:'customer', name:'', phone:'', email:'', gstin:'', address:'', payment_terms:'30' });
 
   useEffect(() => { if (tenant?.id) load(); }, [tenant?.id]);
-  useEffect(() => { setView(initialView); }, [initialView]);
+  useEffect(() => { setView(canSeeSuppliers ? initialView : 'customers'); }, [initialView, canSeeSuppliers]);
 
   async function load() {
     setLoading(true);
@@ -202,7 +204,7 @@ export default function PartiesDashboard({ tenant, role='owner', onSwitchTab, in
       {/* Toggle + filters */}
       <div style={{ display:'flex', gap:9, marginBottom:12, flexWrap:'wrap', alignItems:'center' }}>
         <div style={{ display:'flex', background:T.white, border:`1px solid ${T.bdr}`, borderRadius:9, padding:3, gap:2 }}>
-          {[['customers',`👥 Customers ${customers.length}`],['suppliers',`🏭 Suppliers ${suppliers.length}`],['all',`All ${merged.length}`]].map(([v,l])=>(
+          {[['customers',`👥 Customers ${customers.length}`],['suppliers',`🏭 Suppliers ${suppliers.length}`],['all',`All ${merged.length}`]].filter(([v])=>v==='customers'||canSeeSuppliers).map(([v,l])=>(
             <button key={v} onClick={()=>{ setView(v); setTierFilter('all'); }}
               style={{ padding:'8px 14px', background:view===v?T.red:'transparent', color:view===v?T.white:T.sub, border:'none', borderRadius:7, fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>{l}</button>
           ))}

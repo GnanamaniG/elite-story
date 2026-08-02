@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { canSee } from '../lib/roleAccess';
 import { supabase } from '../lib/supabase';
 
 const T = {
@@ -18,7 +19,8 @@ const QC = {
   failed:  { label:'QC Failed',  color:'#C0392B', bg:'#FEF2F2', bdr:'#FECACA' },
 };
 
-export default function GoodsReceiptNote({ tenant }) {
+export default function GoodsReceiptNote({ tenant, role='owner' }) {
+  const showCost = canSee(role, 'costPrice');
   const [grns,      setGrns]      = useState([]);
   const [purchases, setPurchases] = useState([]);
   const [loading,   setLoading]   = useState(true);
@@ -248,7 +250,7 @@ export default function GoodsReceiptNote({ tenant }) {
                       <td style={{ padding:'4px 6px' }}><input type="number" value={it.rejected} onChange={e=>updItem(i,'rejected',e.target.value)} style={{ width:60, background:T.white, border:`1px solid ${T.bdr}`, borderRadius:5, padding:'4px 6px', fontSize:11, textAlign:'center', fontFamily:'inherit', outline:'none', color:T.red }}/></td>
                       <td style={{ padding:'4px 6px' }}><input value={it.batch_no} onChange={e=>updItem(i,'batch_no',e.target.value)} placeholder="optional" style={{ width:90, background:T.white, border:`1px solid ${T.bdr}`, borderRadius:5, padding:'4px 6px', fontSize:11, fontFamily:'inherit', outline:'none' }}/></td>
                       <td style={{ padding:'4px 6px' }}><input type="date" value={it.expiry} onChange={e=>updItem(i,'expiry',e.target.value)} style={{ width:120, background:T.white, border:`1px solid ${T.bdr}`, borderRadius:5, padding:'4px 6px', fontSize:10, fontFamily:'inherit', outline:'none' }}/></td>
-                      <td style={{ padding:'6px 10px', color:T.red, fontWeight:700 }}>{fmt((it.received||0)*(it.rate||0))}</td>
+                      <td style={{ padding:'6px 10px', color:T.red, fontWeight:700 }}>{showCost?fmt((it.received||0)*(it.rate||0)):<span style={{ color:T.muted, fontWeight:400 }}>🔒</span>}</td>
                     </tr>
                   ))}</tbody>
                 </table>
@@ -256,7 +258,7 @@ export default function GoodsReceiptNote({ tenant }) {
                   <span style={{ color:T.sub }}>Ordered: <strong>{totOrdered}</strong></span>
                   <span style={{ color:T.green }}>Received: <strong>{totReceived}</strong></span>
                   {totRejected>0&&<span style={{ color:T.red }}>Rejected: <strong>{totRejected}</strong></span>}
-                  <span style={{ color:T.red, fontWeight:800, fontSize:14 }}>Value: {fmt(grnValue)}</span>
+                  {showCost && <span style={{ color:T.red, fontWeight:800, fontSize:14 }}>Value: {fmt(grnValue)}</span>}
                 </div>
               </div>}
 

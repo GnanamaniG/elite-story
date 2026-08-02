@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { canSee } from '../lib/roleAccess';
 import { supabase } from '../lib/supabase';
 
 const T = {
@@ -11,7 +12,8 @@ const fmt = n => 'Rs.' + (n||0).toLocaleString('en-IN', { maximumFractionDigits:
 const btn = (bg,color,extra={}) => ({ background:bg, color, border:'none', borderRadius:8, padding:'9px 16px', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit', ...extra });
 const inp = { background:T.srf, border:`1px solid ${T.bdr}`, borderRadius:8, padding:'9px 12px', color:T.ink, fontSize:13, fontFamily:'inherit', outline:'none', width:'100%' };
 
-export default function BatchExpiryTracker({ tenant }) {
+export default function BatchExpiryTracker({ tenant, role='owner' }) {
+  const showCost = canSee(role, 'costPrice');
   const [batches,   setBatches]   = useState([]);
   const [inventory, setInventory] = useState([]);
   const [loading,   setLoading]   = useState(true);
@@ -99,14 +101,14 @@ export default function BatchExpiryTracker({ tenant }) {
       {(expired.length>0||expiring.length>0)&&<div style={{ background:expired.length>0?'#FEF2F2':'#FFFBEB', border:`1px solid ${expired.length>0?'#FECACA':'#FDE68A'}`, borderRadius:10, padding:'11px 16px', marginBottom:16, display:'flex', justifyContent:'space-between', alignItems:'center' }}>
         <span style={{ fontSize:13, fontWeight:600, color:expired.length>0?T.red:T.amber }}>
           {expired.length>0&&`🚨 ${expired.length} expired batches · `}
-          {expiring.length>0&&`⏰ ${expiring.length} expiring within 30 days · `}
-          <strong>{fmt(valueAtRisk)}</strong> value at risk
+          {expiring.length>0&&`⏰ ${expiring.length} expiring within 30 days`}
+          {showCost&&<>{' · '}<strong>{fmt(valueAtRisk)}</strong> value at risk</>}
         </span>
         <button onClick={()=>setFilter(expired.length>0?'expired':'expiring')} style={{ background:expired.length>0?'#FECACA':'#FDE68A', color:expired.length>0?'#991B1B':'#92400E', border:'none', borderRadius:7, padding:'4px 12px', fontSize:11, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Review</button>
       </div>}
 
       <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14, marginBottom:18 }}>
-        {[['Active Batches',active.length,T.green,'✅'],['Expiring ≤30d',expiring.length,T.amber,'⏰'],['Expired',expired.length,T.red,'🚨'],['Value at Risk',fmt(valueAtRisk),T.darkRed,'💸']].map(([label,val,color,icon])=>(
+        {[['Active Batches',active.length,T.green,'✅'],['Expiring ≤30d',expiring.length,T.amber,'⏰'],['Expired',expired.length,T.red,'🚨'],['Value at Risk',showCost?fmt(valueAtRisk):'🔒 Hidden',showCost?T.darkRed:T.muted,'💸']].map(([label,val,color,icon])=>(
           <div key={label} style={{ background:T.white, border:`1px solid ${T.bdr}`, borderRadius:12, padding:'16px 18px', boxShadow:'0 1px 4px rgba(0,0,0,.05)' }}>
             <div style={{ display:'flex', justifyContent:'space-between', marginBottom:6 }}>
               <div style={{ fontSize:10, color:T.sub, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.05em' }}>{label}</div>
@@ -150,7 +152,7 @@ export default function BatchExpiryTracker({ tenant }) {
                 <td style={{ padding:'10px 12px' }}><ExpiryBadge days={b.days} qty={b.qty_remaining}/></td>
                 <td style={{ padding:'10px 12px', textAlign:'right', color:T.sub }}>{b.qty_received}</td>
                 <td style={{ padding:'10px 12px', textAlign:'right', fontWeight:700, color:b.qty_remaining>0?T.green:T.muted }}>{b.qty_remaining}</td>
-                <td style={{ padding:'10px 12px', textAlign:'right', color:T.red, fontWeight:700 }}>{fmt(b.qty_remaining*(b.cost_price||0))}</td>
+                <td style={{ padding:'10px 12px', textAlign:'right', color:T.red, fontWeight:700 }}>{showCost?fmt(b.qty_remaining*(b.cost_price||0)):<span style={{ color:T.muted, fontWeight:400 }}>🔒</span>}</td>
                 <td style={{ padding:'10px 12px' }}>
                   <div style={{ display:'flex', gap:5 }}>
                     {b.qty_remaining>0&&<button onClick={()=>consumeQty(b)} style={{ background:'#EFF6FF', color:T.blue, border:'none', borderRadius:6, padding:'4px 9px', fontSize:10, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Use</button>}
@@ -179,7 +181,7 @@ export default function BatchExpiryTracker({ tenant }) {
                     {inventory.map(i=><option key={i.id} value={i.id}>{i.name}</option>)}
                   </select>
                 </div>
-                {[['Batch / Lot No *','text','batch_no'],['Supplier','text','supplier'],['Mfg Date','date','mfg_date'],['Expiry Date','date','expiry_date'],['Quantity *','number','qty_received'],['Cost Price','number','cost_price'],['Storage Location','text','location']].map(([label,type,key])=>(
+                {[['Batch / Lot No *','text','batch_no'],['Supplier','text','supplier'],['Mfg Date','date','mfg_date'],['Expiry Date','date','expiry_date'],['Quantity *','number','qty_received'],['Cost Price','number','cost_price'],['Storage Location','text','location']].filter(([label])=>label!=='Cost Price'||showCost).map(([label,type,key])=>(
                   <div key={key}><label style={{ fontSize:10, color:T.sub, fontWeight:700, textTransform:'uppercase', display:'block', marginBottom:4 }}>{label}</label><input type={type} value={form[key]} onChange={e=>setForm(f=>({...f,[key]:e.target.value}))} required={label.includes('*')} style={inp}/></div>
                 ))}
               </div>
