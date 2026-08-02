@@ -43,6 +43,24 @@ export default function POS({ tenant, activeBranch, user }) {
 
   const [session, setSession] = useState(null);
   const [sessionChecked, setSessionChecked] = useState(false);
+  const [closingSession, setClosingSession] = useState(false);
+  const [closeCash, setCloseCash] = useState('');
+
+  async function closeSession() {
+    if (!session) return;
+    const actual = parseFloat(closeCash)||0;
+    // Cash sales rung up during this session
+    const { data: sessSales } = await supabase.from('sales')
+      .select('total,payment_mode').eq('tenant_id', tenant.id).eq('session_id', session.id);
+    const cashSales = (sessSales||[]).filter(s=>(s.payment_mode||'cash')==='cash')
+      .reduce((a,s)=>a+(s.total||0),0);
+    const expected = (session.opening_float||0) + cashSales;
+    await supabase.from('cash_sessions').update({
+      status:'closed', closed_at:new Date().toISOString(),
+      closing_cash: actual, expected_cash: expected, difference: actual-expected,
+    }).eq('id', session.id);
+    setSession(null); setClosingSession(false); setCloseCash('');
+  }
 
   useEffect(() => {
     if (!tenant?.id) return;
@@ -275,7 +293,24 @@ export default function POS({ tenant, activeBranch, user }) {
   }
 
   return (
-    <div style={{ display:'grid', gridTemplateColumns:'1fr 380px', height:'calc(100vh - 50px)' }}>
+    <div style={{ display:'flex', flexDirection:'column', height:'calc(100vh - 50px)' }}>
+
+      {/* Session status bar */}
+      {session && (
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'7px 14px',
+                      background:'#F0FDF4', borderBottom:`1px solid #BBF7D0`, fontSize:11.5, flexShrink:0 }}>
+          <span style={{ color:'#16A34A', fontWeight:600 }}>
+            🏪 Session open · opened {new Date(session.opened_at).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'})}
+            {session.opening_float>0 && <span style={{ color:T.sub }}> · float {fmt(session.opening_float)}</span>}
+          </span>
+          <button onClick={()=>setClosingSession(true)}
+            style={{ background:'#fff', color:'#16A34A', border:'1px solid #BBF7D0', borderRadius:6, padding:'4px 12px', fontSize:10.5, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+            Close Session
+          </button>
+        </div>
+      )}
+
+    <div style={{ display:'grid', gridTemplateColumns:'1fr 380px', flex:1, minHeight:0 }}>
       {/* Left */}
       <div style={{ display:'flex', flexDirection:'column', overflow:'hidden', borderRight:`1px solid ${T.bdr}` }}>
         <div style={{ padding:12, borderBottom:`1px solid ${T.bdr}`, background:T.srf }}>
@@ -558,6 +593,35 @@ export default function POS({ tenant, activeBranch, user }) {
         </div>
       )}
 
+    </div>
+
+      {/* Close session modal */}
+      {closingSession && session && (
+        <div onClick={()=>setClosingSession(false)} style={{ position:'fixed', inset:0, background:'rgba(17,24,39,.5)', zIndex:320, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
+          <div onClick={e=>e.stopPropagation()} style={{ background:T.srf, borderRadius:15, padding:24, width:'100%', maxWidth:390, boxShadow:'0 20px 60px rgba(0,0,0,.25)' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', marginBottom:5 }}>
+              <div style={{ fontSize:16, fontWeight:800, color:T.red }}>Close Session</div>
+              <button onClick={()=>setClosingSession(false)} style={{ background:'none', border:'none', fontSize:21, cursor:'pointer', color:T.muted }}>×</button>
+            </div>
+            <div style={{ fontSize:11.5, color:T.sub, marginBottom:16 }}>
+              Count the drawer and enter what's actually in it. The difference is recorded.
+            </div>
+            <div style={{ background:T.bg, borderRadius:9, padding:'11px 14px', marginBottom:14, fontSize:12.5 }}>
+              <div style={{ display:'flex', justifyContent:'space-between', padding:'3px 0' }}>
+                <span style={{ color:T.sub }}>Opening float</span>
+                <strong style={{ color:T.ink }}>{fmt(session.opening_float||0)}</strong>
+              </div>
+            </div>
+            <label style={{ fontSize:10, color:T.sub, fontWeight:700, textTransform:'uppercase', display:'block', marginBottom:5 }}>Cash counted in drawer</label>
+            <input type="number" value={closeCash} onChange={e=>setCloseCash(e.target.value)} autoFocus
+              style={{ width:'100%', background:T.card, border:`1px solid ${T.bdr}`, borderRadius:9, padding:'13px', fontSize:20, fontWeight:800, textAlign:'center', color:T.green, fontFamily:'inherit', outline:'none', marginBottom:16 }}/>
+            <div style={{ display:'flex', gap:10 }}>
+              <button onClick={()=>setClosingSession(false)} style={{ flex:1, background:T.card, color:T.sub, border:`1px solid ${T.bdr}`, borderRadius:9, padding:'12px', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Cancel</button>
+              <button onClick={closeSession} style={{ flex:2, background:T.red, color:'#fff', border:'none', borderRadius:9, padding:'12px', fontSize:13, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Close &amp; Reconcile</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
