@@ -267,7 +267,15 @@ export default function POS({ tenant, activeBranch, user }) {
       || (i.code||'').toLowerCase().includes(search.toLowerCase())
       || (i.barcode||'').includes(search));
   const filtered     = search ? gridItems : [];
-  const custFiltered = customers.filter(c => custSearch && (c.name.toLowerCase().includes(custSearch.toLowerCase())||(c.phone||'').includes(custSearch)));
+  const custFiltered = customers.filter(c => {
+    if (!custSearch.trim()) return false;
+    const q = custSearch.trim().toLowerCase();
+    const qDigits = custSearch.replace(/\D/g,'');
+    const nameMatch  = (c.name||'').toLowerCase().includes(q);
+    const phoneDigits = (c.phone||'').replace(/\D/g,'');
+    const phoneMatch = qDigits.length>=3 && phoneDigits.includes(qDigits);
+    return nameMatch || phoneMatch;
+  });
   async function addCustomer(e) {
     e.preventDefault();
     if (!newCust.name.trim()) return;
@@ -441,7 +449,11 @@ export default function POS({ tenant, activeBranch, user }) {
                         ))
                       : (
                         <div style={{ padding:'14px 13px', textAlign:'center' }}>
-                          <div style={{ fontSize:12, color:T.muted, marginBottom:9 }}>No customer matches "{custSearch}"</div>
+                          <div style={{ fontSize:12, color:T.muted, marginBottom:9 }}>
+                            {customers.length===0
+                              ? 'No customers in the system yet'
+                              : `No customer matches "${custSearch}"`}
+                          </div>
                           <button type="button" onClick={()=>{ setNewCust(n=>({ ...n, name:/^\d+$/.test(custSearch)?'':custSearch, phone:/^\d+$/.test(custSearch)?custSearch:'' })); setShowNewCust(true); }}
                             style={{ background:T.red, color:'#fff', border:'none', borderRadius:8, padding:'8px 16px', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
                             + Add "{custSearch}" as new customer

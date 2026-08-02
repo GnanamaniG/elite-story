@@ -122,10 +122,16 @@ export default function PartiesDashboard({ tenant, role='owner', onSwitchTab, in
 
   const displayed = useMemo(() => base
     .filter(p => tierFilter==='all' || p.tier===tierFilter)
-    .filter(p => !debouncedSearch
-      || p.name.toLowerCase().includes(debouncedSearch.toLowerCase())
-      || (p.phone||'').includes(debouncedSearch)
-      || (p.gstin||'').toLowerCase().includes(debouncedSearch.toLowerCase()))
+    .filter(p => {
+      if (!debouncedSearch.trim()) return true;
+      const q = debouncedSearch.trim().toLowerCase();
+      const qDigits = debouncedSearch.replace(/\D/g,'');
+      const nameMatch  = (p.name||'').toLowerCase().includes(q);
+      const gstMatch   = (p.gstin||'').toLowerCase().includes(q);
+      const phoneDigits = (p.phone||'').replace(/\D/g,'');
+      const phoneMatch = qDigits.length>=3 && phoneDigits.includes(qDigits);
+      return nameMatch || gstMatch || phoneMatch;
+    })
     .sort((a,b) => {
       const va = a.kind==='customer' ? (a.total_spent||0) : (a.recentSpend||0);
       const vb = b.kind==='customer' ? (b.total_spent||0) : (b.recentSpend||0);
