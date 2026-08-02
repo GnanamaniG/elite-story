@@ -408,7 +408,7 @@ function LoginPage() {
 
 
 export default function App() {
-  const nav=(p,t)=>{setPage(p);setDeepTab(t||null);};const{user,tenant,loading}=useAuth();const[showOnboard,setShowOnboard]=useState(false);const[page,setPage]=useState('dashboard');const[deepTab,setDeepTab]=useState(null);const[localTenant,setLocalTenant]=useState(null);const[branches,setBranches]=useState([]);const[activeBranch,setActiveBranch]=useState(null);
+  const nav=(p,t)=>{setPage(p);setDeepTab(t||null);};const{user,tenant,loading}=useAuth();const[showOnboard,setShowOnboard]=useState(false);const[page,setPage]=useState((new URLSearchParams(window.location.search).get('page'))||'dashboard');const[deepTab,setDeepTab]=useState(null);const[localTenant,setLocalTenant]=useState(null);const[branches,setBranches]=useState([]);const[activeBranch,setActiveBranch]=useState(null);
   const activeTenant=localTenant||tenant;
   const{role}=useRole(user,activeTenant);
   useEffect(()=>{if(activeTenant&&activeTenant.onboarded===false)setShowOnboard(true);},[activeTenant?.id,activeTenant?.onboarded]);
