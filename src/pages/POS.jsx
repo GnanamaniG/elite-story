@@ -32,7 +32,9 @@ export default function POS({ tenant, activeBranch, user }) {
   const [promoCode,   setPromoCode]   = useState('');
   const [promoResult, setPromoResult] = useState(null);
   const [promoCodes,  setPromoCodes]  = useState([]);
-  const [discount,    setDiscount]    = useState(0);
+  const [discount,    setDiscount]    = useState(0);   // promo-code discount
+  const [manualDisc,  setManualDisc]  = useState('');  // cashier-entered manual discount
+  const [manualType,  setManualType]  = useState('flat'); // 'flat' ₹ or 'percent' %
   const [heldBills,   setHeldBills]   = useState([]);
   const [saving,      setSaving]      = useState(false);
   const [lastInv,     setLastInv]     = useState(null);
@@ -158,7 +160,7 @@ export default function POS({ tenant, activeBranch, user }) {
   function holdBill() {
     if (!cart.length) return;
     setHeldBills(prev => [...prev, { id:Date.now(), cart:[...cart], customer, discount, promoCode, time:new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'}) }]);
-    setCart([]); setCustomer(null); setDiscount(0); setPromoCode(''); setPromoResult(null);
+    setCart([]); setCustomer(null); setDiscount(0); setManualDisc(''); setPromoCode(''); setPromoResult(null);
   }
 
   function resumeBill(bill) {
@@ -168,8 +170,13 @@ export default function POS({ tenant, activeBranch, user }) {
 
   const subtotal    = cart.reduce((s,c) => s + c.amount, 0);
   const gstTotal    = cart.reduce((s,c) => s + (c.amount*c.gst/(100+c.gst)), 0);
+  const cgstTotal   = gstTotal / 2;   // intra-state sale assumed — same-state GST splits evenly into CGST + SGST
+  const sgstTotal   = gstTotal / 2;
   const loyaltyDisc = Math.min(loyaltyRedeem*(tenant?.loyalty_point_value||0.5), subtotal*0.1);
-  const total       = Math.max(0, subtotal - discount - loyaltyDisc);
+  const manualDiscAmt = manualType==='percent'
+    ? Math.round(subtotal * (parseFloat(manualDisc)||0) / 100)
+    : Math.round(parseFloat(manualDisc)||0);
+  const total       = Math.max(0, subtotal - discount - manualDiscAmt - loyaltyDisc);
 
   async function checkout() {
     if (!cart.length) return alert('Cart is empty');
@@ -184,7 +191,7 @@ export default function POS({ tenant, activeBranch, user }) {
           inv_num:invNum, date:new Date().toISOString().slice(0,10),
           customer:customer?.name||'Walk-in', customer_id:customer?.id,
           items:cart, subtotal, gst_amount:gstTotal,
-          discount, promo_code:null, promo_discount:discount,
+          discount: discount+manualDiscAmt, promo_code:null, promo_discount:discount, manual_discount:manualDiscAmt,
           total, payment_mode:payMode, status:'paid',
         };
         await queueAdd('sales', offlineSale, { localRef:invNum });
@@ -195,8 +202,8 @@ export default function POS({ tenant, activeBranch, user }) {
         });
         setInventory(adjusted);
         cacheSet(OFFLINE_KEYS.inventory, adjusted);
-        setLastInv({ ...offlineSale, inv_num:invNum, _offline:true });
-        setCart([]); setCustomer(null); setDiscount(0); setPromoCode(''); setPromoResult(null); setLoyaltyRedeem(0); setPickedSerials({});
+        setLastInv({ ...offlineSale, inv_num:invNum, _offline:true, customerPhone:customer?.phone||'' });
+        setCart([]); setCustomer(null); setDiscount(0); setManualDisc(''); setPromoCode(''); setPromoResult(null); setLoyaltyRedeem(0); setPickedSerials({});
         setSaving(false);
         return;
       }
@@ -207,7 +214,7 @@ export default function POS({ tenant, activeBranch, user }) {
         customer:customer?.name||'Walk-in', customer_id:customer?.id,
         items:cart.map(li => pickedSerials[li.id]?.length ? { ...li, serials:pickedSerials[li.id].map(s=>s.serial_no) } : li),
         subtotal, gst_amount:gstTotal,
-        discount, promo_code:promoCode||null, promo_discount:discount,
+        discount: discount+manualDiscAmt, promo_code:promoCode||null, promo_discount:discount, manual_discount:manualDiscAmt,
         total, payment_mode:payMode, status:'paid',
       }).select().single();
 
@@ -239,8 +246,8 @@ export default function POS({ tenant, activeBranch, user }) {
 
       if (promoResult?.promo) await supabase.from('promo_codes').update({ uses_count:(promoResult.promo.uses_count||0)+1 }).eq('id', promoResult.promo.id);
 
-      setLastInv({ ...sale, inv_num: invNum });
-      setCart([]); setCustomer(null); setDiscount(0); setPromoCode(''); setPromoResult(null); setLoyaltyRedeem(0); setPickedSerials({});
+      setLastInv({ ...sale, inv_num: invNum, customerPhone:customer?.phone||'' });
+      setCart([]); setCustomer(null); setDiscount(0); setManualDisc(''); setPromoCode(''); setPromoResult(null); setLoyaltyRedeem(0); setPickedSerials({});
       await load();
     } catch(e) { alert('Checkout error: '+e.message); }
     finally { setSaving(false); }
@@ -253,10 +260,22 @@ export default function POS({ tenant, activeBranch, user }) {
     <div class="center bold large">${biz}</div><div class="center">${tenant?.address||''}</div><div class="center">${tenant?.phone||''}</div>
     <div class="divider"></div><div class="row"><span>Invoice:</span><span class="bold">${sale.inv_num}</span></div><div class="row"><span>Date:</span><span>${sale.date}</span></div><div class="row"><span>Customer:</span><span>${sale.customer}</span></div>
     <div class="divider"></div>${(sale.items||[]).map(i=>`<div class="row"><span>${i.name} x${i.qty}</span><span>Rs.${(i.amount||0).toFixed(2)}</span></div>`).join('')}
-    <div class="divider"></div><div class="row"><span>Subtotal</span><span>Rs.${(sale.subtotal||0).toFixed(2)}</span></div><div class="row"><span>GST</span><span>Rs.${(sale.gst_amount||0).toFixed(2)}</span></div>${(sale.discount||0)>0?`<div class="row"><span>Discount</span><span>-Rs.${(sale.discount||0).toFixed(2)}</span></div>`:''}<div class="row bold large"><span>TOTAL</span><span>Rs.${(sale.total||0).toFixed(2)}</span></div>
+    <div class="divider"></div><div class="row"><span>Subtotal</span><span>Rs.${(sale.subtotal||0).toFixed(2)}</span></div><div class="row"><span>CGST</span><span>Rs.${((sale.gst_amount||0)/2).toFixed(2)}</span></div><div class="row"><span>SGST</span><span>Rs.${((sale.gst_amount||0)/2).toFixed(2)}</span></div>${(sale.discount||0)>0?`<div class="row"><span>Discount</span><span>-Rs.${(sale.discount||0).toFixed(2)}</span></div>`:''}<div class="row bold large"><span>TOTAL</span><span>Rs.${(sale.total||0).toFixed(2)}</span></div>
     <div class="divider"></div><div class="center">Thank you! Please visit again 🙏</div><div style="height:20px"></div>
     <script>window.onload=()=>{window.print();setTimeout(()=>window.close(),500)}<\/script></body></html>`;
     w.document.write(html); w.document.close();
+  }
+
+  function sendBillWhatsApp(sale) {
+    const phone = (sale.customerPhone||'').replace(/\D/g,'');
+    if (!phone) { alert('No phone number on this bill — attach a customer with a phone number to send on WhatsApp.'); return; }
+    const to = phone.length===10 ? '91'+phone : phone.replace(/^0/,'91');
+    const biz = tenant?.name || 'Our Store';
+    const lines = (sale.items||[]).map(i => `${i.name} x${i.qty} — ${fmt(i.amount)}`).join('\n');
+    const msg = `*${biz}*\nInvoice: *${sale.inv_num}*\nDate: ${sale.date}\n\n${lines}\n\nSubtotal: ${fmt(sale.subtotal)}\nCGST: ${fmt((sale.gst_amount||0)/2)}\nSGST: ${fmt((sale.gst_amount||0)/2)}` +
+      (sale.discount>0 ? `\nDiscount: -${fmt(sale.discount)}` : '') +
+      `\n*Total: ${fmt(sale.total)}*\n\nThank you for shopping with us! 🙏`;
+    window.open(`https://wa.me/${to}?text=${encodeURIComponent(msg)}`, '_blank');
   }
 
   const categories   = ['all', ...new Set(inventory.map(i=>i.cat||i.category).filter(Boolean))];
@@ -487,9 +506,34 @@ export default function POS({ tenant, activeBranch, user }) {
             {promoResult?.success&&<div style={{ fontSize:11, color:T.green, marginTop:4 }}>✅ {fmt(discount)} discount applied!</div>}
           </div>
 
+          {/* Manual discount — cashier override, independent of promo codes */}
+          <div style={{ marginBottom:12 }}>
+            <div style={{ fontSize:11, color:T.sub, fontWeight:700, textTransform:'uppercase', marginBottom:6 }}>Manual Discount</div>
+            <div style={{ display:'flex', gap:6 }}>
+              <div style={{ display:'flex', background:T.card, border:`1px solid ${T.bdr}`, borderRadius:7, overflow:'hidden' }}>
+                {['flat','percent'].map(t=>(
+                  <button key={t} onClick={()=>setManualType(t)}
+                    style={{ padding:'8px 10px', background: manualType===t?T.blue:'transparent', color: manualType===t?'#fff':T.sub, border:'none', cursor:'pointer', fontFamily:'inherit', fontSize:12, fontWeight:700 }}>
+                    {t==='flat'?'₹':'%'}
+                  </button>
+                ))}
+              </div>
+              <input type="number" min={0} value={manualDisc} onChange={e=>setManualDisc(e.target.value)}
+                placeholder={manualType==='percent'?'e.g. 10':'e.g. 50'}
+                style={{ flex:1, background:T.card, border:`1px solid ${T.bdr}`, borderRadius:7, padding:'8px 10px', color:T.ink, fontSize:13, fontFamily:'inherit', outline:'none' }}/>
+              {manualDiscAmt>0&&<button onClick={()=>setManualDisc('')} style={{ background:T.red+'22', color:T.red, border:'none', borderRadius:7, padding:'8px 10px', fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>×</button>}
+            </div>
+            {manualDiscAmt>0&&<div style={{ fontSize:11, color:T.green, marginTop:4 }}>✅ {fmt(manualDiscAmt)} manual discount applied</div>}
+          </div>
+
           {/* Totals */}
           <div style={{ background:T.card, borderRadius:9, padding:12, marginBottom:12 }}>
-            {[[`Subtotal (${cart.length} items)`,fmt(subtotal),T.sub],['GST',fmt(gstTotal),T.muted],discount>0&&['Promo Discount','-'+fmt(discount),T.green],loyaltyDisc>0&&['Loyalty Discount','-'+fmt(loyaltyDisc),T.amber]].filter(Boolean).map(([label,val,color])=>(
+            {[[`Subtotal (${cart.length} items)`,fmt(subtotal),T.sub],
+              ['CGST',fmt(cgstTotal),T.muted],
+              ['SGST',fmt(sgstTotal),T.muted],
+              discount>0&&['Promo Discount','-'+fmt(discount),T.green],
+              manualDiscAmt>0&&['Manual Discount','-'+fmt(manualDiscAmt),T.green],
+              loyaltyDisc>0&&['Loyalty Discount','-'+fmt(loyaltyDisc),T.amber]].filter(Boolean).map(([label,val,color])=>(
               <div key={label} style={{ display:'flex', justifyContent:'space-between', padding:'3px 0', fontSize:12 }}><span style={{ color:T.sub }}>{label}</span><span style={{ color }}>{val}</span></div>
             ))}
             <div style={{ display:'flex', justifyContent:'space-between', paddingTop:8, marginTop:6, borderTop:`1px solid ${T.bdr}`, fontSize:18, fontWeight:900 }}>
@@ -521,7 +565,14 @@ export default function POS({ tenant, activeBranch, user }) {
           <button onClick={checkout} disabled={!cart.length||saving} style={{ background:T.green, color:'#fff', border:'none', borderRadius:9, padding:'14px', fontSize:16, fontWeight:800, cursor:'pointer', fontFamily:'inherit' }}>
             {saving?'Processing…':`✅ Checkout ${fmt(total)}`}
           </button>
-          {lastInv&&<button onClick={()=>printReceipt(lastInv)} style={{ background:T.blue+'22', color:T.blue, border:'none', borderRadius:8, padding:'10px', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>🖨️ Print Last Receipt — {lastInv.inv_num}</button>}
+          {lastInv&&(
+            <div style={{ display:'flex', gap:8 }}>
+              <button onClick={()=>printReceipt(lastInv)} style={{ flex:1, background:T.blue+'22', color:T.blue, border:'none', borderRadius:8, padding:'10px', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>🖨️ Print — {lastInv.inv_num}</button>
+              <button onClick={()=>sendBillWhatsApp(lastInv)} disabled={!lastInv.customerPhone}
+                title={lastInv.customerPhone?'':'No phone number on this bill'}
+                style={{ flex:1, background: lastInv.customerPhone?'#DCFCE7':T.card, color: lastInv.customerPhone?T.green:T.muted, border:'none', borderRadius:8, padding:'10px', fontSize:12, fontWeight:700, cursor: lastInv.customerPhone?'pointer':'not-allowed', fontFamily:'inherit' }}>💬 Send on WhatsApp</button>
+            </div>
+          )}
         </div>
       </div>
 
