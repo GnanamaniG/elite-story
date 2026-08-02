@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useAuth } from './hooks/useAuth';
-import { signIn, signUp, signOut, supabase } from './lib/supabase';
+import { signIn, signUp, signOut, supabase, sendOtp, verifyOtp, isValidPhone } from './lib/supabase';
 import useRole from './hooks/useRole';
 import OnboardingWizard from './pages/OnboardingWizard';
 import { canAccess } from './lib/roleAccess';
@@ -150,12 +150,262 @@ import SalesHeatmap from './pages/SalesHeatmap';
 
 const T = { bg:'#F7F3F3', srf:'#0f1220', bdr:'#1e2540', blue:'#4f7cff', ink:'#eef0f8', sub:'#6b7598', muted:'#4a5175', red:'#ff4d6a', green:'#00d68f' };
 
+const L = { bg:'#F7F3F3', srf:'#FFFFFF', bdr:'#E8DEDE', lightRed:'#FEF2F2',
+  red:'#C0392B', darkRed:'#8B0000', maroon:'#7B1E1E',
+  green:'#16A34A', ink:'#111827', sub:'#6B7280', muted:'#9CA3AF' };
+
+
 function LoginPage() {
-  const [mode,setMode]=useState('login');const [email,setEmail]=useState('');const [password,setPassword]=useState('');const [bizName,setBizName]=useState('');const [loading,setLoading]=useState(false);const [error,setError]=useState('');
-  const inp={width:'100%',background:T.srf,border:`1px solid ${T.bdr}`,borderRadius:8,padding:'11px 14px',color:T.ink,fontSize:14,fontFamily:'inherit',outline:'none',boxSizing:'border-box'};
-  async function handle(e){e.preventDefault();setLoading(true);setError('');try{if(mode==='login'){const{error:err}=await signIn(email,password);if(err)throw err;}else{if(!bizName.trim()){setError('Business name required');setLoading(false);return;}const{error:err}=await signUp(email,password,{biz_name:bizName,biz_type:'retail'});if(err)throw err;setError('✅ Account created! Check your email.');setMode('login');}}catch(e){setError(e.message);}finally{setLoading(false);}}
-  return(<div style={{minHeight:'100vh',background:'#F7F3F3',display:'flex',alignItems:'center',justifyContent:'center',padding:20}}><div style={{width:'100%',maxWidth:400}}><div style={{textAlign:'center',marginBottom:32}}><div style={{width:64,height:64,background:T.blue,borderRadius:16,display:'inline-flex',alignItems:'center',justifyContent:'center',fontSize:24,fontWeight:900,color:'#fff',marginBottom:16,boxShadow:'0 0 32px #4f7cff44'}}>7SQ</div><div style={{fontSize:26,fontWeight:800,color:T.ink}}>Elite Store</div><div style={{fontSize:13,color:T.sub,marginTop:4}}>Business Management Platform</div></div><div style={{background:T.srf,border:`1px solid ${T.bdr}`,borderRadius:14,padding:28}}>{error&&<div style={{background:error.startsWith('✅')?T.green+'18':T.red+'18',border:`1px solid ${error.startsWith('✅')?T.green:T.red}44`,borderRadius:8,padding:'10px 14px',color:error.startsWith('✅')?T.green:T.red,fontSize:13,marginBottom:16}}>{error}</div>}<div style={{display:'flex',background:T.bg,borderRadius:9,padding:3,marginBottom:20}}>{[['login','Sign In'],['signup','Create Account']].map(([id,label])=>(<button key={id} onClick={()=>{setMode(id);setError('');}} style={{flex:1,background:mode===id?T.srf:'transparent',color:mode===id?T.ink:T.sub,border:mode===id?`1px solid ${T.bdr}`:'none',borderRadius:7,padding:'8px',fontSize:13,fontWeight:mode===id?700:500,cursor:'pointer',fontFamily:'inherit'}}>{label}</button>))}</div><form onSubmit={handle} style={{display:'flex',flexDirection:'column',gap:13}}>{mode==='signup'&&<div><label style={{fontSize:11,color:T.sub,fontWeight:700,textTransform:'uppercase',display:'block',marginBottom:5}}>Business Name *</label><input value={bizName} onChange={e=>setBizName(e.target.value)} placeholder="e.g. Signals Elite" style={inp}/></div>}<div><label style={{fontSize:11,color:T.sub,fontWeight:700,textTransform:'uppercase',display:'block',marginBottom:5}}>Email *</label><input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@business.com" style={inp} required/></div><div><label style={{fontSize:11,color:T.sub,fontWeight:700,textTransform:'uppercase',display:'block',marginBottom:5}}>Password *</label><input type="password" value={password} onChange={e=>setPassword(e.target.value)} style={inp} required/></div><button type="submit" disabled={loading} style={{background:T.blue,color:'#fff',border:'none',borderRadius:9,padding:'13px',fontSize:15,fontWeight:700,cursor:'pointer',fontFamily:'inherit',marginTop:4}}>{loading?'Please wait…':mode==='login'?'Sign In':'Create Account'}</button></form></div></div></div>);
+  const [method,   setMethod]   = useState('phone');   // phone | email
+  const [mode,     setMode]     = useState('login');   // login | signup
+  const [step,     setStep]     = useState('entry');   // entry | otp
+  const [email,    setEmail]    = useState('');
+  const [password, setPassword] = useState('');
+  const [phone,    setPhone]    = useState('');
+  const [otp,      setOtp]      = useState(['','','','','','']);
+  const [bizName,  setBizName]  = useState('');
+  const [loading,  setLoading]  = useState(false);
+  const [error,    setError]    = useState('');
+  const [resendIn, setResendIn] = useState(0);
+  const otpRefs = useRef([]);
+
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const t = setTimeout(() => setResendIn(s => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendIn]);
+
+  useEffect(() => { if (step === 'otp') otpRefs.current[0]?.focus(); }, [step]);
+
+  const inp = {
+    width:'100%', background:L.bg, border:`1px solid ${L.bdr}`, borderRadius:9,
+    padding:'12px 14px', color:L.ink, fontSize:14, fontFamily:'inherit',
+    outline:'none', boxSizing:'border-box',
+  };
+  const lbl = { fontSize:10, color:L.sub, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.06em', display:'block', marginBottom:6 };
+
+  function reset(msg = '') { setError(msg); setLoading(false); }
+
+  // ── Email / password ────────────────────────────────────────
+  async function handleEmail(e) {
+    e.preventDefault(); setLoading(true); setError('');
+    try {
+      if (mode === 'login') {
+        const { error: err } = await signIn(email, password);
+        if (err) throw err;
+      } else {
+        if (!bizName.trim()) return reset('Business name is required');
+        const { error: err } = await signUp(email, password, { biz_name:bizName, biz_type:'retail' });
+        if (err) throw err;
+        setError('✅ Account created. Check your email to confirm, then sign in.');
+        setMode('login');
+      }
+    } catch (e) { setError(e.message); }
+    finally { setLoading(false); }
+  }
+
+  // ── Phone: request OTP ──────────────────────────────────────
+  async function requestOtp(e) {
+    e?.preventDefault();
+    if (!isValidPhone(phone)) return setError('Enter a valid 10-digit mobile number');
+    if (mode === 'signup' && !bizName.trim()) return setError('Business name is required');
+    setLoading(true); setError('');
+    try {
+      const { error: err } = await sendOtp(
+        phone,
+        mode === 'signup',
+        mode === 'signup' ? { biz_name:bizName, biz_type:'retail' } : null
+      );
+      if (err) throw err;
+      setStep('otp'); setResendIn(30); setOtp(['','','','','','']);
+    } catch (e) {
+      const m = String(e.message||'');
+      if (/not found|does not exist|Signups not allowed/i.test(m) && mode === 'login') {
+        setError('No account with this number. Switch to Create Account to register.');
+      } else if (/provider|not enabled|unsupported/i.test(m)) {
+        setError('SMS sign-in is not switched on yet. Enable a phone provider in Supabase → Authentication → Providers.');
+      } else setError(m);
+    } finally { setLoading(false); }
+  }
+
+  // ── Phone: verify OTP ───────────────────────────────────────
+  async function submitOtp(code) {
+    const token = code || otp.join('');
+    if (token.length !== 6) return setError('Enter all 6 digits');
+    setLoading(true); setError('');
+    try {
+      const { error: err } = await verifyOtp(phone, token);
+      if (err) throw err;
+      // session established — App re-renders via useAuth
+    } catch (e) {
+      setError(/expired|invalid/i.test(e.message) ? 'That code is wrong or has expired. Try again.' : e.message);
+      setOtp(['','','','','','']); otpRefs.current[0]?.focus();
+    } finally { setLoading(false); }
+  }
+
+  function onOtpChange(i, v) {
+    const digit = v.replace(/\D/g,'').slice(-1);
+    const next = [...otp]; next[i] = digit; setOtp(next);
+    if (digit && i < 5) otpRefs.current[i+1]?.focus();
+    if (next.every(d=>d) && next.join('').length === 6) submitOtp(next.join(''));
+  }
+
+  function onOtpKey(i, e) {
+    if (e.key === 'Backspace' && !otp[i] && i > 0) otpRefs.current[i-1]?.focus();
+    if (e.key === 'ArrowLeft'  && i > 0) otpRefs.current[i-1]?.focus();
+    if (e.key === 'ArrowRight' && i < 5) otpRefs.current[i+1]?.focus();
+  }
+
+  function onOtpPaste(e) {
+    const txt = (e.clipboardData.getData('text')||'').replace(/\D/g,'').slice(0,6);
+    if (txt.length === 6) { e.preventDefault(); setOtp(txt.split('')); submitOtp(txt); }
+  }
+
+  return (
+    <div style={{ minHeight:'100vh', background:L.bg, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
+      <div style={{ width:'100%', maxWidth:410 }}>
+
+        {/* Brand */}
+        <div style={{ textAlign:'center', marginBottom:28 }}>
+          <div style={{ width:62, height:62, background:L.maroon, borderRadius:16, display:'inline-flex', alignItems:'center', justifyContent:'center', fontSize:21, fontWeight:900, color:'#fff', marginBottom:14, boxShadow:'0 6px 22px rgba(123,30,30,.28)' }}>7SQ</div>
+          <div style={{ fontSize:25, fontWeight:900, color:L.darkRed, letterSpacing:'-0.02em' }}>7SQ</div>
+          <div style={{ fontSize:13, color:L.sub, marginTop:3 }}>Business Management Platform</div>
+        </div>
+
+        <div style={{ background:L.srf, border:`1px solid ${L.bdr}`, borderRadius:16, padding:26, boxShadow:'0 3px 18px rgba(0,0,0,.06)' }}>
+
+          {error && (
+            <div style={{
+              background: error.startsWith('✅') ? '#F0FDF4' : '#FEF2F2',
+              border: `1px solid ${error.startsWith('✅') ? '#BBF7D0' : '#FECACA'}`,
+              borderRadius:9, padding:'11px 14px',
+              color: error.startsWith('✅') ? L.green : L.red,
+              fontSize:12.5, marginBottom:16, lineHeight:1.5,
+            }}>{error}</div>
+          )}
+
+          {step === 'entry' ? (
+            <>
+              {/* Login / Signup */}
+              <div style={{ display:'flex', background:L.bg, borderRadius:10, padding:3, marginBottom:16 }}>
+                {[['login','Sign In'],['signup','Create Account']].map(([id,label])=>(
+                  <button key={id} onClick={()=>{ setMode(id); setError(''); }}
+                    style={{ flex:1, background: mode===id?L.srf:'transparent', color: mode===id?L.darkRed:L.sub,
+                             border: mode===id?`1px solid ${L.bdr}`:'1px solid transparent', borderRadius:8,
+                             padding:'9px', fontSize:13, fontWeight: mode===id?700:500, cursor:'pointer', fontFamily:'inherit' }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Phone / Email */}
+              <div style={{ display:'flex', gap:7, marginBottom:18 }}>
+                {[['phone','📱 Mobile OTP'],['email','✉️ Email']].map(([id,label])=>(
+                  <button key={id} onClick={()=>{ setMethod(id); setError(''); }}
+                    style={{ flex:1, background: method===id?L.lightRed:'transparent', color: method===id?L.red:L.sub,
+                             border:`1.5px solid ${method===id?L.red:L.bdr}`, borderRadius:9, padding:'9px',
+                             fontSize:12, fontWeight: method===id?700:500, cursor:'pointer', fontFamily:'inherit' }}>
+                    {label}
+                  </button>
+                ))}
+              </div>
+
+              {mode === 'signup' && (
+                <div style={{ marginBottom:13 }}>
+                  <label style={lbl}>Business Name *</label>
+                  <input value={bizName} onChange={e=>setBizName(e.target.value)} placeholder="e.g. Signals Elite" style={inp}/>
+                </div>
+              )}
+
+              {method === 'phone' ? (
+                <form onSubmit={requestOtp}>
+                  <div style={{ marginBottom:16 }}>
+                    <label style={lbl}>Mobile Number *</label>
+                    <div style={{ display:'flex', gap:8 }}>
+                      <div style={{ background:L.bg, border:`1px solid ${L.bdr}`, borderRadius:9, padding:'12px 13px', fontSize:14, color:L.sub, fontWeight:600 }}>+91</div>
+                      <input type="tel" inputMode="numeric" value={phone} maxLength={10}
+                        onChange={e=>setPhone(e.target.value.replace(/\D/g,''))}
+                        placeholder="98430 12345" style={{ ...inp, flex:1, letterSpacing:'0.06em', fontSize:16 }}/>
+                    </div>
+                    <div style={{ fontSize:11, color:L.muted, marginTop:6 }}>We'll text you a 6-digit code</div>
+                  </div>
+                  <button type="submit" disabled={loading || phone.length < 10}
+                    style={{ width:'100%', background: phone.length>=10 ? L.red : L.bdr, color:'#fff', border:'none',
+                             borderRadius:10, padding:'14px', fontSize:15, fontWeight:700,
+                             cursor: phone.length>=10 ? 'pointer':'not-allowed', fontFamily:'inherit' }}>
+                    {loading ? 'Sending…' : 'Send OTP'}
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleEmail} style={{ display:'flex', flexDirection:'column', gap:13 }}>
+                  <div>
+                    <label style={lbl}>Email *</label>
+                    <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="you@business.com" style={inp} required/>
+                  </div>
+                  <div>
+                    <label style={lbl}>Password *</label>
+                    <input type="password" value={password} onChange={e=>setPassword(e.target.value)} style={inp} required/>
+                  </div>
+                  <button type="submit" disabled={loading}
+                    style={{ background:L.red, color:'#fff', border:'none', borderRadius:10, padding:'14px',
+                             fontSize:15, fontWeight:700, cursor:'pointer', fontFamily:'inherit', marginTop:4 }}>
+                    {loading ? 'Please wait…' : mode==='login' ? 'Sign In' : 'Create Account'}
+                  </button>
+                </form>
+              )}
+            </>
+          ) : (
+            /* ── OTP step ─────────────────────────────────── */
+            <>
+              <div style={{ textAlign:'center', marginBottom:20 }}>
+                <div style={{ fontSize:34, marginBottom:8 }}>📲</div>
+                <div style={{ fontSize:16, fontWeight:800, color:L.darkRed }}>Enter the code</div>
+                <div style={{ fontSize:12.5, color:L.sub, marginTop:5 }}>
+                  Sent to <strong style={{ color:L.ink }}>+91 {phone}</strong>
+                  <button onClick={()=>{ setStep('entry'); setError(''); }}
+                    style={{ background:'none', border:'none', color:L.red, fontSize:12, cursor:'pointer', fontFamily:'inherit', textDecoration:'underline', marginLeft:6 }}>change</button>
+                </div>
+              </div>
+
+              <div style={{ display:'flex', gap:8, justifyContent:'center', marginBottom:18 }} onPaste={onOtpPaste}>
+                {otp.map((d,i)=>(
+                  <input key={i} ref={el=>otpRefs.current[i]=el}
+                    type="tel" inputMode="numeric" maxLength={1} value={d}
+                    onChange={e=>onOtpChange(i, e.target.value)}
+                    onKeyDown={e=>onOtpKey(i, e)}
+                    style={{ width:46, height:54, textAlign:'center', fontSize:22, fontWeight:800,
+                             background: d?L.lightRed:L.bg, border:`2px solid ${d?L.red:L.bdr}`,
+                             borderRadius:10, color:L.darkRed, fontFamily:'inherit', outline:'none' }}/>
+                ))}
+              </div>
+
+              <button onClick={()=>submitOtp()} disabled={loading || otp.join('').length<6}
+                style={{ width:'100%', background: otp.join('').length===6 ? L.green : L.bdr, color:'#fff',
+                         border:'none', borderRadius:10, padding:'14px', fontSize:15, fontWeight:700,
+                         cursor: otp.join('').length===6 ? 'pointer':'not-allowed', fontFamily:'inherit' }}>
+                {loading ? 'Verifying…' : 'Verify & Continue'}
+              </button>
+
+              <div style={{ textAlign:'center', marginTop:14 }}>
+                {resendIn > 0
+                  ? <span style={{ fontSize:12, color:L.muted }}>Resend code in {resendIn}s</span>
+                  : <button onClick={requestOtp} disabled={loading}
+                      style={{ background:'none', border:'none', color:L.red, fontSize:12.5, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+                      Resend OTP
+                    </button>}
+              </div>
+            </>
+          )}
+        </div>
+
+        <div style={{ textAlign:'center', marginTop:18, fontSize:11, color:L.muted }}>
+          By continuing you agree to keep your business data secure
+        </div>
+      </div>
+    </div>
+  );
 }
+
 
 export default function App() {
   const nav=(p,t)=>{setPage(p);setDeepTab(t||null);};const{user,tenant,loading}=useAuth();const[showOnboard,setShowOnboard]=useState(false);const[page,setPage]=useState('dashboard');const[deepTab,setDeepTab]=useState(null);const[localTenant,setLocalTenant]=useState(null);const[branches,setBranches]=useState([]);const[activeBranch,setActiveBranch]=useState(null);
