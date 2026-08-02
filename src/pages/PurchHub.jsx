@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { HubTabs, HubHeader } from './HubShell';
 import { filterTabs } from '../lib/roleAccess';
-import Purchases             from './Purchases';
+import PurchasesDashboard    from './PurchasesDashboard';
 import PurchaseOrders        from './PurchaseOrders';
 import GoodsReceiptNote      from './GoodsReceiptNote';
 import BillScanner           from './BillScanner';
@@ -37,7 +37,7 @@ export default function PurchHub({ tenant, deepTab, role = 'owner' }) {
       <HubHeader title="Purchases" subtitle="Orders, suppliers, payables and performance" icon="🛒"/>
       <HubTabs tabs={visibleTabs} active={tab} onChange={setTab}/>
       <div style={{ flex:1, overflow:'auto', background:'#F7F3F3' }}>
-        {tab==='history'     && <Purchases            tenant={tenant}/>}
+        {tab==='history'     && <PurchasesDashboard   tenant={tenant} role={role} onSwitchTab={setTab}/>}
         {tab==='orders'      && <PurchaseOrders       tenant={tenant}/>}
         {tab==='scan'        && <BillScanner          tenant={tenant}/>}
         {tab==='grn'         && <GoodsReceiptNote     tenant={tenant}/>}
