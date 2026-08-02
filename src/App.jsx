@@ -102,11 +102,9 @@ import PurchHub         from './pages/PurchHub';
 import HRHub            from './pages/HRHub';
 import GSTHub           from './pages/GSTHub';
 import AccountingHub    from './pages/AccountingHub';
-import SalesDocHub      from './pages/SalesDocHub';
 import LoyaltyHub       from './pages/LoyaltyHub';
 import MarketingHub     from './pages/MarketingHub';
 import OpsHub           from './pages/OpsHub';
-import AIHub            from './pages/AIHub';
 import ToolsHub         from './pages/ToolsHub';
 import DeliveryManagement from './pages/DeliveryManagement';
 import PaymentLinks        from './pages/PaymentLinks';
@@ -424,11 +422,9 @@ export default function App() {
     hrhub:         <HRHub         {...props}/>,
     gsthub:        <GSTHub        {...props}/>,
     accountinghub: <AccountingHub {...props}/>,
-    salesdochub:   <SalesDocHub   {...props}/>,
     loyaltyhub:    <LoyaltyHub    {...props}/>,
     marketinghub:  <MarketingHub  {...props}/>,
     opshub:        <OpsHub        {...props}/>,
-    aihub:         <AIHub         {...props}/>,
     toolshub:      <ToolsHub      {...props}/>,
     billscan:      <BillScanner   {...props}/>,
     rfm:           <RFMAnalysis   {...props}/>,

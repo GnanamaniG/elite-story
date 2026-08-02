@@ -8,10 +8,7 @@ import EODReport     from './EODReport';
 import ServiceBays   from './ServiceBays';
 import Repairs       from './Repairs';
 import QualityControl from './QualityControl';
-import MultiStoreAnalytics from './MultiStoreAnalytics';
-import Subscriptions from './Subscriptions';
 import ReorderManagement from './ReorderManagement';
-import DemandForecast from './DemandForecast';
 
 const TABS = [
   { id:'branches',  label:'Branches',       icon:'🏪' },
@@ -22,9 +19,6 @@ const TABS = [
   { id:'repairs',   label:'Repairs',        icon:'🔨' },
   { id:'qc',        label:'Quality Control',icon:'✅' },
   { id:'reorder',   label:'Reorder Mgmt',   icon:'🔄' },
-  { id:'forecast',  label:'Demand Forecast',icon:'🔮' },
-  { id:'multistore',label:'Multi-Store',    icon:'🏬' },
-  { id:'subs',      label:'Subscriptions',  icon:'🔁' },
 ];
 
 export default function OpsHub({ tenant, deepTab, role = 'owner' }) {
@@ -45,9 +39,6 @@ export default function OpsHub({ tenant, deepTab, role = 'owner' }) {
         {tab==='repairs'    && <Repairs            tenant={tenant}/>}
         {tab==='qc'         && <QualityControl     tenant={tenant}/>}
         {tab==='reorder'    && <ReorderManagement  tenant={tenant}/>}
-        {tab==='forecast'   && <DemandForecast     tenant={tenant}/>}
-        {tab==='multistore' && <MultiStoreAnalytics tenant={tenant}/>}
-        {tab==='subs'       && <Subscriptions      tenant={tenant}/>}
       </div>
     </div>
   );

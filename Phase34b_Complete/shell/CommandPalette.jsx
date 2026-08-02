@@ -16,17 +16,6 @@ export const DESTINATIONS = [
   { id:'pos',        label:'Sales / POS',          group:'Core',      icon:'🧧', keys:'bill billing checkout counter' },
   { id:'expenses',   label:'Expenses',             group:'Core',      icon:'💸', keys:'spend cost outgoing' },
 
-  // Sales hub
-  { id:'saleshub', tab:'history',    label:'Sales History',       group:'Sales', icon:'📄', keys:'invoices bills sold' },
-  { id:'saleshub', tab:'b2b',        label:'B2B / Wholesale',     group:'Sales', icon:'🏢', keys:'bulk wholesale business' },
-  { id:'saleshub', tab:'quotations', label:'Quotations',          group:'Sales', icon:'📋', keys:'quote estimate proforma' },
-  { id:'saleshub', tab:'delivery',   label:'Delivery Management', group:'Sales', icon:'🚚', keys:'dispatch courier shipping' },
-  { id:'saleshub', tab:'warranty',   label:'Warranty Tracker',    group:'Sales', icon:'🛡️', keys:'guarantee claim' },
-  { id:'saleshub', tab:'paylinks',   label:'Payment Links',       group:'Sales', icon:'💸', keys:'upi collect pay online' },
-  { id:'saleshub', tab:'returns',    label:'Sales Returns',       group:'Sales', icon:'🔄', keys:'refund exchange' },
-  { id:'saleshub', tab:'creditnotes',label:'Credit Notes',        group:'Sales', icon:'📝', keys:'cn adjustment' },
-  { id:'saleshub', tab:'statements', label:'Customer Statements', group:'Sales', icon:'📊', keys:'account soa' },
-
   // Sales
   { id:'saleshub', tab:'history', label:'Sales History', group:'Sales', icon:'📄', keys:'sales history' },
   { id:'saleshub', tab:'b2b', label:'B2B / Wholesale', group:'Sales', icon:'🏢', keys:'wholesale' },
@@ -37,11 +26,6 @@ export const DESTINATIONS = [
   { id:'saleshub', tab:'returns', label:'Returns', group:'Sales', icon:'🔄', keys:'returns' },
   { id:'saleshub', tab:'creditnotes', label:'Credit Notes', group:'Sales', icon:'📝', keys:'credit notes' },
   { id:'saleshub', tab:'statements', label:'Statements', group:'Sales', icon:'📊', keys:'statements' },
-  { id:'salesdochub', tab:'quotations', label:'Quotations', group:'Sales', icon:'📋', keys:'quotations' },
-  { id:'salesdochub', tab:'emi', label:'EMI / BNPL', group:'Sales', icon:'💳', keys:'emi bnpl' },
-  { id:'salesdochub', tab:'ewaybill', label:'e-Way Bill', group:'Sales', icon:'🚚', keys:'way bill' },
-  { id:'salesdochub', tab:'einvoice', label:'E-Invoice', group:'Sales', icon:'🧾', keys:'invoice' },
-  { id:'salesdochub', tab:'credit', label:'Credit Ledger', group:'Sales', icon:'📒', keys:'credit ledger' },
 
   // Inventory
   { id:'invhub', tab:'products', label:'Products', group:'Inventory', icon:'📦', keys:'products' },
@@ -147,9 +131,6 @@ export const DESTINATIONS = [
   { id:'opshub', tab:'repairs', label:'Repairs', group:'Operations', icon:'🔨', keys:'repairs' },
   { id:'opshub', tab:'qc', label:'Quality Control', group:'Operations', icon:'✅', keys:'quality control' },
   { id:'opshub', tab:'reorder', label:'Reorder Mgmt', group:'Operations', icon:'🔄', keys:'reorder mgmt' },
-  { id:'opshub', tab:'forecast', label:'Demand Forecast', group:'Operations', icon:'🔮', keys:'demand forecast' },
-  { id:'opshub', tab:'multistore', label:'Multi-Store', group:'Operations', icon:'🏬', keys:'multi store' },
-  { id:'opshub', tab:'subs', label:'Subscriptions', group:'Operations', icon:'🔁', keys:'subscriptions' },
 
   // Reports
   { id:'reportshub', tab:'health', label:'Business Health', group:'Reports', icon:'💚', keys:'business health' },
