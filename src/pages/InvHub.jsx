@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { HubTabs, HubHeader } from './HubShell';
 import { filterTabs } from '../lib/roleAccess';
-import Inventory        from './Inventory';
+import ItemsDashboard   from './ItemsDashboard';
 import Variants         from './Variants';
 import PriceLists       from './PriceLists';
 import PriceHistory     from './PriceHistory';
@@ -43,7 +43,7 @@ export default function InvHub({ tenant, deepTab, role = 'owner' }) {
       <HubHeader title="Inventory" subtitle="Products, pricing, valuation, adjustments and labels" icon="📦"/>
       <HubTabs tabs={visibleTabs} active={tab} onChange={setTab}/>
       <div style={{ flex:1, overflow:'auto', background:'#F7F3F3' }}>
-        {tab==='products'  && <Inventory        tenant={tenant}/>}
+        {tab==='products'  && <ItemsDashboard   tenant={tenant} role={role}/>}
         {tab==='variants'  && <Variants         tenant={tenant}/>}
         {tab==='prices'    && <PriceLists       tenant={tenant}/>}
         {tab==='history'   && <PriceHistory     tenant={tenant}/>}
