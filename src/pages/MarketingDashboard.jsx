@@ -146,6 +146,7 @@ export default function MarketingDashboard({ tenant, role='owner', onSwitchTab }
             {[['30','Last 30 days'],['90','Last 90 days'],['180','Last 6 months'],['365','Last year']].map(([v,l])=><option key={v} value={v}>{l}</option>)}
           </select>
           <button onClick={()=>onSwitchTab?.('promo')} style={btn(T.bg, T.sub, { border:`1px solid ${T.bdr}` })}>🏷️ Promo Codes</button>
+          <button onClick={()=>onSwitchTab?.('bot')} style={btn(T.purple, T.white)}>🤖 Campaign Bot</button>
           <button onClick={()=>onSwitchTab?.('campaigns')} style={btn(T.red, T.white)}>+ New Campaign</button>
         </div>
       </div>
