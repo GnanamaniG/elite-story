@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { HubTabs, HubHeader } from './HubShell';
 import { filterTabs } from '../lib/roleAccess';
+import MarketingDashboard from './MarketingDashboard';
 import Campaigns      from './Campaigns';
 import WhatsAppCatalog from './WhatsAppCatalog';
 import WAOrderBot     from './WAOrderBot';
@@ -12,6 +13,7 @@ import OnlineStore    from './OnlineStore';
 import ProductCatalog from './ProductCatalog';
 
 const TABS = [
+  { id:'overview',  label:'Overview',      icon:'📊' },
   { id:'campaigns', label:'Campaigns',     icon:'📣' },
   { id:'wa',        label:'WA Catalog',    icon:'💬' },
   { id:'wabot',     label:'WA Order Bot',  icon:'🤖' },
@@ -24,7 +26,7 @@ const TABS = [
 ];
 
 export default function MarketingHub({ tenant, deepTab, role = 'owner' }) {
-  const [tab, setTab] = useState('campaigns');
+  const [tab, setTab] = useState('overview');
   const visibleTabs = filterTabs(TABS, role, 'marketinghub');
   useEffect(() => { if (visibleTabs.length && !visibleTabs.some(t=>t.id===tab)) setTab(visibleTabs[0].id); }, [role]);
   useEffect(() => { if (deepTab && TABS.some(t=>t.id===deepTab)) setTab(deepTab); }, [deepTab]);
@@ -33,6 +35,7 @@ export default function MarketingHub({ tenant, deepTab, role = 'owner' }) {
       <HubHeader title="Marketing" subtitle="Campaigns, WhatsApp, SMS, promo codes and online store" icon="📣"/>
       <HubTabs tabs={visibleTabs} active={tab} onChange={setTab}/>
       <div style={{ flex:1, overflow:'auto', background:'#F7F3F3' }}>
+        {tab==='overview'  && <MarketingDashboard tenant={tenant} role={role} onSwitchTab={setTab}/>}
         {tab==='campaigns' && <Campaigns       tenant={tenant}/>}
         {tab==='wa'        && <WhatsAppCatalog tenant={tenant}/>}
         {tab==='wabot'     && <WAOrderBot      tenant={tenant}/>}
