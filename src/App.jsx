@@ -5,7 +5,7 @@ import useRole from './hooks/useRole';
 import OnboardingWizard from './pages/OnboardingWizard';
 import { canAccess } from './lib/roleAccess';
 import AppShell           from './components/layout/AppShell';
-import Dashboard          from './pages/Dashboard';
+import BusinessPulse from './pages/BusinessPulse';
 import POS                from './pages/POS';
 import Sales              from './pages/Sales';
 import Inventory          from './pages/Inventory';
@@ -468,7 +468,7 @@ export default function App() {
     warranty:      <WarrantyTracker     {...props}/>,
     taskboard:     <StaffTaskBoard      {...props}/>,
     smartalerts:   <SmartAlerts         {...props}/>,
-    dashboard:       <Dashboard           {...props} onNavigate={nav}/>,
+    dashboard:       <BusinessPulse       {...props} onNavigate={nav}/>,
     pos:             <POS                 {...props}/>,
     sales:           <Sales               {...props}/>,
     inventory:       <Inventory           {...props}/>,

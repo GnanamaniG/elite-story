@@ -12,7 +12,7 @@ const fmt = n => 'Rs.' + (n||0).toLocaleString('en-IN', { maximumFractionDigits:
 // ── Full destination map: page id + hub tab ────────────────────
 export const DESTINATIONS = [
   // Core
-  { id:'dashboard',  label:'Business Pulse',       group:'Core',      icon:'⚡', keys:'home overview pulse dashboard' },
+  { id:'dashboard',  label:'Dashboard',            group:'Core',      icon:'⚡', keys:'home overview pulse' },
   { id:'pos',        label:'Sales / POS',          group:'Core',      icon:'🧧', keys:'bill billing checkout counter' },
   { id:'expenses',   label:'Expenses',             group:'Core',      icon:'💸', keys:'spend cost outgoing' },
 

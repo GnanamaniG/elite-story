@@ -22,7 +22,7 @@ const WHITE         = '#FFFFFF';
 const BG            = '#F7F3F3';
 
 const NAV = [
-  { id:'dashboard',     label:'Dashboard',       icon:'⚡' },
+  { id:'dashboard',     label:'Business Pulse',  icon:'⚡' },
   { id:'pos',           label:'Sales / POS',     icon:'🧧' },
   { id:'saleshub',      label:'Sales',           icon:'📄' },
   { id:'invhub',        label:'Inventory',       icon:'📦' },
