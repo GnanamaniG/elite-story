@@ -10,7 +10,7 @@ import POS                from './pages/POS';
 import Sales              from './pages/Sales';
 import Inventory          from './pages/Inventory';
 import Customers          from './pages/Customers';
-import Expenses           from './pages/Expenses';
+import ExpensesDashboard from './pages/ExpensesDashboard';
 import Purchases          from './pages/Purchases';
 import Reports            from './pages/Reports';
 import GSTFiling          from './pages/GSTFiling';
@@ -474,7 +474,7 @@ export default function App() {
     inventory:       <Inventory           {...props}/>,
     customers:       <Customers           {...props}/>,
     purchases:       <Purchases           {...props}/>,
-    expenses:        <Expenses            {...props}/>,
+    expenses:        <ExpensesDashboard   {...props}/>,
     reports:         <Reports             {...props}/>,
     gst:             <GSTFiling           {...props}/>,
     ai:              <AIAssistant         {...props}/>,
