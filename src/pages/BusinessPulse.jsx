@@ -236,7 +236,7 @@ export default function BusinessPulse({ tenant, user, onNavigate }) {
       )}
 
       {/* 4 KPI hero cards */}
-      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(260px,1fr))', gap:14, marginBottom:16 }}>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:14, marginBottom:16 }}>
 
         {/* Sales */}
         <div style={{ background:T.white, border:`1px solid ${T.bdr}`, borderRadius:13, padding:'16px 18px', boxShadow:'0 1px 4px rgba(0,0,0,.05)' }}>
