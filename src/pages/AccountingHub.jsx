@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { HubTabs, HubHeader } from './HubShell';
 import { filterTabs } from '../lib/roleAccess';
+import AccountingDashboard from './AccountingDashboard';
 import ProfitAndLoss       from './ProfitAndLoss';
 import Accounting          from './Accounting';
 import DailyCashBook       from './DailyCashBook';
@@ -10,6 +11,7 @@ import ExpenseClaims       from './ExpenseClaims';
 import PartnershipAccounts from './PartnershipAccounts';
 
 const TABS = [
+  { id:'overview',    label:'Overview',         icon:'💰' },
   { id:'pl',          label:'Profit & Loss',    icon:'📊' },
   { id:'accounts',    label:'Balance Sheet',    icon:'📒' },
   { id:'cashbook',    label:'Daily Cash Book',  icon:'📔' },
@@ -19,8 +21,8 @@ const TABS = [
   { id:'partnership', label:'Partnership',      icon:'🤝' },
 ];
 
-export default function AccountingHub({ tenant, deepTab, role = 'owner' }) {
-  const [tab, setTab] = useState('pl');
+export default function AccountingHub({ tenant, deepTab, role = 'owner', onNavigate }) {
+  const [tab, setTab] = useState('overview');
   const visibleTabs = filterTabs(TABS, role, 'accountinghub');
   useEffect(() => { if (visibleTabs.length && !visibleTabs.some(t=>t.id===tab)) setTab(visibleTabs[0].id); }, [role]);
   useEffect(() => { if (deepTab && TABS.some(t=>t.id===deepTab)) setTab(deepTab); }, [deepTab]);
@@ -29,6 +31,7 @@ export default function AccountingHub({ tenant, deepTab, role = 'owner' }) {
       <HubHeader title="Accounting" subtitle="P&L, cash book, cash flow and budgets" icon="📒"/>
       <HubTabs tabs={visibleTabs} active={tab} onChange={setTab}/>
       <div style={{ flex:1, overflow:'auto', background:'#F7F3F3' }}>
+        {tab==='overview'    && <AccountingDashboard tenant={tenant} role={role} onSwitchTab={setTab} onNavigate={onNavigate}/>}
         {tab==='pl'          && <ProfitAndLoss       tenant={tenant}/>}
         {tab==='accounts'    && <Accounting          tenant={tenant}/>}
         {tab==='cashbook'    && <DailyCashBook       tenant={tenant}/>}
