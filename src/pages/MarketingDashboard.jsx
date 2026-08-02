@@ -17,7 +17,7 @@ const CHANNELS = {
   sms:      { l:'SMS',      icon:'📱', color:'#2563EB', live:true,  how:'Via your SMS gateway' },
   promo:    { l:'Promo Codes', icon:'🏷️', color:'#7C3AED', live:true, how:'Redemptions tracked at checkout' },
   referral: { l:'Referrals',   icon:'🔗', color:'#0D9488', live:true, how:'Tracked when referred customer buys' },
-  instagram:{ l:'Instagram',icon:'📷', color:'#EA580C', live:false, how:'Needs Meta Business API' },
+  instagram:{ l:'Instagram',icon:'📷', color:'#EA580C', live:true,  how:'Auto-posts via Campaign Bot once Meta app is approved' },
   email:    { l:'Email',    icon:'✉️', color:'#D97706', live:false, how:'Needs an email service provider' },
 };
 

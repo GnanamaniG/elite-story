@@ -3,6 +3,7 @@ import { HubTabs, HubHeader } from './HubShell';
 import { filterTabs } from '../lib/roleAccess';
 import MarketingDashboard from './MarketingDashboard';
 import CampaignBot        from './CampaignBot';
+import MarketingIntegrations from './MarketingIntegrations';
 import Campaigns      from './Campaigns';
 import WhatsAppCatalog from './WhatsAppCatalog';
 import WAOrderBot     from './WAOrderBot';
@@ -17,6 +18,7 @@ const TABS = [
   { id:'overview',  label:'Overview',      icon:'📊' },
   { id:'campaigns', label:'Campaigns',     icon:'📣' },
   { id:'bot',       label:'Campaign Bot',   icon:'🤖' },
+  { id:'integrations', label:'Integrations', icon:'🔌' },
   { id:'wa',        label:'WA Catalog',    icon:'💬' },
   { id:'wabot',     label:'WA Order Bot',  icon:'🤖' },
   { id:'watpl',     label:'WA Templates',  icon:'📝' },
@@ -40,6 +42,7 @@ export default function MarketingHub({ tenant, deepTab, role = 'owner' }) {
         {tab==='overview'  && <MarketingDashboard tenant={tenant} role={role} onSwitchTab={setTab}/>}
         {tab==='campaigns' && <Campaigns       tenant={tenant}/>}
         {tab==='bot'       && <CampaignBot     tenant={tenant} role={role}/>}
+        {tab==='integrations' && <MarketingIntegrations tenant={tenant} role={role}/>}
         {tab==='wa'        && <WhatsAppCatalog tenant={tenant}/>}
         {tab==='wabot'     && <WAOrderBot      tenant={tenant}/>}
         {tab==='watpl'     && <WATemplates     tenant={tenant}/>}
