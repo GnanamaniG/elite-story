@@ -8,6 +8,7 @@ import PriceHistory     from './PriceHistory';
 import StockAudit       from './StockAudit';
 import StockAdjustments from './StockAdjustments';
 import BatchExpiryTracker from './BatchExpiryTracker';
+import SerialRegistry     from './SerialRegistry';
 import StockValuation   from './StockValuation';
 import BulkImport       from './BulkImport';
 import BarcodeGenerator from './BarcodeGenerator';
@@ -23,6 +24,7 @@ const TABS = [
   { id:'history',   label:'Price History',  icon:'📉' },
   { id:'valuation', label:'Stock Valuation',icon:'🏦' },
   { id:'batches',   label:'Batch & Expiry', icon:'🏷️' },
+  { id:'serials',   label:'Serial / IMEI',  icon:'🔢' },
   { id:'adjust',    label:'Adjustments',    icon:'📋' },
   { id:'audit',     label:'Stock Audit',    icon:'✅' },
   { id:'transfer',  label:'Transfers',      icon:'🔀' },
@@ -49,6 +51,7 @@ export default function InvHub({ tenant, deepTab, role = 'owner' }) {
         {tab==='history'   && <PriceHistory     tenant={tenant}/>}
         {tab==='valuation' && <StockValuation   tenant={tenant}/>}
         {tab==='batches'   && <BatchExpiryTracker tenant={tenant}/>}
+        {tab==='serials'   && <SerialRegistry     tenant={tenant} role={role}/>}
         {tab==='adjust'    && <StockAdjustments tenant={tenant}/>}
         {tab==='audit'     && <StockAudit       tenant={tenant}/>}
         {tab==='transfer'  && <StockTransferOrders tenant={tenant}/>}

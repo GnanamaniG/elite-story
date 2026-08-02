@@ -51,7 +51,7 @@ export default function ItemsDashboard({ tenant, role='owner', onSwitchTab }) {
   const [editItem,  setEditItem]  = useState(null);
   const [saving,    setSaving]    = useState(false);
   const [saved,     setSaved]     = useState(false);
-  const [form, setForm] = useState({ name:'', code:'', cat:'', hsn:'', sp:'', cp:'', mrp:'', gst:'18', stock:'', alert:'10', type:'product', unit:'Pcs' });
+  const [form, setForm] = useState({ name:'', code:'', cat:'', hsn:'', sp:'', cp:'', mrp:'', gst:'18', stock:'', alert:'10', type:'product', unit:'Pcs', is_serialised:false, serial_label:'Serial No' });
 
   useEffect(() => { if (tenant?.id) load(); }, [tenant?.id]);
 
@@ -89,13 +89,13 @@ export default function ItemsDashboard({ tenant, role='owner', onSwitchTab }) {
   }
 
   function resetForm() {
-    setForm({ name:'', code:'', cat:'', hsn:'', sp:'', cp:'', mrp:'', gst:'18', stock:'', alert:'10', type:'product', unit:'Pcs' });
+    setForm({ name:'', code:'', cat:'', hsn:'', sp:'', cp:'', mrp:'', gst:'18', stock:'', alert:'10', type:'product', unit:'Pcs', is_serialised:false, serial_label:'Serial No' });
     setEditItem(null);
   }
 
   function openEdit(it) {
     setEditItem(it);
-    setForm({ name:it.name, code:it.code||'', cat:it.cat||'', hsn:it.hsn||'', sp:String(it.sp||''), cp:String(it.cp||''), mrp:String(it.mrp||''), gst:String(it.gst||18), stock:String(it.stock||''), alert:String(it.alert||10), type:it.type||'product', unit:it.unit||'Pcs' });
+    setForm({ name:it.name, code:it.code||'', cat:it.cat||'', hsn:it.hsn||'', sp:String(it.sp||''), cp:String(it.cp||''), mrp:String(it.mrp||''), gst:String(it.gst||18), stock:String(it.stock||''), alert:String(it.alert||10), type:it.type||'product', unit:it.unit||'Pcs', is_serialised:!!it.is_serialised, serial_label:it.serial_label||'Serial No' });
     setShowForm(true);
   }
 
@@ -112,6 +112,7 @@ export default function ItemsDashboard({ tenant, role='owner', onSwitchTab }) {
       sp:parseFloat(form.sp)||0, cp:parseFloat(form.cp)||0, mrp:parseFloat(form.mrp)||0,
       gst:parseFloat(form.gst)||0, stock:parseInt(form.stock)||0, alert:parseInt(form.alert)||10,
       type:form.type, unit:form.unit, active:true,
+      is_serialised:!!form.is_serialised, serial_label:form.serial_label||'Serial No',
     };
     if (editItem) await supabase.from('inventory').update(payload).eq('id', editItem.id);
     else          await supabase.from('inventory').insert(payload);
@@ -407,6 +408,23 @@ export default function ItemsDashboard({ tenant, role='owner', onSwitchTab }) {
                 {form.type==='product'&&<>
                   <div><label style={{ fontSize:10, color:T.sub, fontWeight:700, textTransform:'uppercase', display:'block', marginBottom:4 }}>Stock Qty</label><input type="number" value={form.stock} onChange={e=>setForm(f=>({...f,stock:e.target.value}))} style={inp}/></div>
                   <div><label style={{ fontSize:10, color:T.sub, fontWeight:700, textTransform:'uppercase', display:'block', marginBottom:4 }}>Alert Level</label><input type="number" value={form.alert} onChange={e=>setForm(f=>({...f,alert:e.target.value}))} style={inp}/></div>
+                  <div style={{ gridColumn:'1/-1', background:T.bg, borderRadius:9, padding:'11px 14px' }}>
+                    <label style={{ display:'flex', alignItems:'center', gap:10, cursor:'pointer' }}>
+                      <input type="checkbox" checked={form.is_serialised} onChange={e=>setForm(f=>({...f,is_serialised:e.target.checked}))} style={{ width:17, height:17, accentColor:T.red, cursor:'pointer' }}/>
+                      <div>
+                        <div style={{ fontSize:12.5, fontWeight:700, color:T.ink }}>Track each unit individually</div>
+                        <div style={{ fontSize:10.5, color:T.sub, marginTop:1 }}>For phones, appliances, anything with a serial. POS will ask which unit is being sold.</div>
+                      </div>
+                    </label>
+                    {form.is_serialised && (
+                      <div style={{ marginTop:10 }}>
+                        <label style={{ fontSize:10, color:T.sub, fontWeight:700, textTransform:'uppercase', display:'block', marginBottom:4 }}>What is it called?</label>
+                        <select value={form.serial_label} onChange={e=>setForm(f=>({...f,serial_label:e.target.value}))} style={{ ...inp, cursor:'pointer' }}>
+                          {['Serial No','IMEI','Engine No','Chassis No','Batch Code'].map(l=><option key={l} value={l}>{l}</option>)}
+                        </select>
+                      </div>
+                    )}
+                  </div>
                 </>}
               </div>
               {form.sp&&form.cp&&<div style={{ background:T.lightRed, borderRadius:9, padding:'9px 13px', marginTop:12, fontSize:12, color:T.darkRed }}>

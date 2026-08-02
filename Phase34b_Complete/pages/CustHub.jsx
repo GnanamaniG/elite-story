@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { HubTabs, HubHeader } from './HubShell';
 import { filterTabs } from '../lib/roleAccess';
-import Customers         from './Customers';
+import PartiesDashboard  from './PartiesDashboard';
 import CustomerSegments  from './CustomerSegments';
 import RFMAnalysis       from './RFMAnalysis';
 import CustomerVisitLog  from './CustomerVisitLog';
@@ -39,7 +39,7 @@ export default function CustHub({ tenant, deepTab, role = 'owner' }) {
       <HubHeader title="Customers" subtitle="Customers, credit, retention and reviews" icon="👥"/>
       <HubTabs tabs={visibleTabs} active={tab} onChange={setTab}/>
       <div style={{ flex:1, overflow:'auto', background:'#F7F3F3' }}>
-        {tab==='list'      && <Customers        tenant={tenant}/>}
+        {tab==='list'      && <PartiesDashboard tenant={tenant} role={role} onSwitchTab={setTab} initialView='customers'/>}
         {tab==='visits'    && <CustomerVisitLog  tenant={tenant}/>}
         {tab==='segments'  && <CustomerSegments tenant={tenant}/>}
         {tab==='rfm'       && <RFMAnalysis       tenant={tenant}/>}

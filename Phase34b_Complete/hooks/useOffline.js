@@ -23,7 +23,7 @@ export function useOffline(tenant) {
     if (!tenant?.id || !navigator.onLine) return;
     try {
       const [inv, cust] = await Promise.all([
-        supabase.from('inventory').select('id,name,code,sp,cp,gst,stock,category,barcode').eq('tenant_id',tenant.id).eq('active',true),
+        supabase.from('inventory').select('id,name,code,sp,cp,gst,stock,category,barcode,cat,hsn,is_serialised,serial_label').eq('tenant_id',tenant.id).eq('active',true),
         supabase.from('customers').select('id,name,phone,total_spent').eq('tenant_id',tenant.id),
       ]);
       if (inv.data)  await cacheSet(OFFLINE_KEYS.inventory, inv.data);

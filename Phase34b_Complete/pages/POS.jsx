@@ -26,6 +26,8 @@ export default function POS({ tenant, activeBranch, user }) {
   const [showNewCust, setShowNewCust] = useState(false);
   const [newCust,     setNewCust]     = useState({ name:'', phone:'', email:'' });
   const [savingCust,  setSavingCust]  = useState(false);
+  const [serialPick,  setSerialPick]  = useState(null);   // { line, options }
+  const [pickedSerials, setPickedSerials] = useState({}); // { cartItemId: [serialRow,…] }
   const [payMode,     setPayMode]     = useState('cash');
   const [promoCode,   setPromoCode]   = useState('');
   const [promoResult, setPromoResult] = useState(null);
@@ -95,9 +97,25 @@ export default function POS({ tenant, activeBranch, user }) {
     setCart(prev => {
       const ex = prev.find(c => c.id === item.id);
       if (ex) return prev.map(c => c.id === item.id ? { ...c, qty: c.qty+1, amount: (c.qty+1)*c.rate } : c);
-      return [...prev, { id:item.id, name:item.name, code:item.code, rate:item.sp||0, qty:1, amount:item.sp||0, gst:item.gst||0, hsn:item.hsn||'', cat:item.cat||'' }];
+      return [...prev, { id:item.id, name:item.name, code:item.code, rate:item.sp||0, qty:1, amount:item.sp||0, gst:item.gst||0, hsn:item.hsn||'', cat:item.cat||'', is_serialised:!!item.is_serialised, serial_label:item.serial_label||'Serial No' }];
     });
     setSearch('');
+    if (item.is_serialised && navigator.onLine) openSerialPicker(item);
+  }
+
+  async function openSerialPicker(item) {
+    const { data } = await supabase.from('item_serials')
+      .select('id,serial_no,serial_alt').eq('tenant_id', tenant.id)
+      .eq('item_id', item.id).eq('status','in_stock').order('received_date').limit(200);
+    setSerialPick({ item, options: data||[] });
+  }
+
+  function chooseSerial(itemId, row) {
+    setPickedSerials(prev => {
+      const cur = prev[itemId] || [];
+      if (cur.find(s=>s.id===row.id)) return { ...prev, [itemId]: cur.filter(s=>s.id!==row.id) };
+      return { ...prev, [itemId]: [...cur, row] };
+    });
   }
 
   function updateQty(id, qty) {
@@ -160,7 +178,7 @@ export default function POS({ tenant, activeBranch, user }) {
         setInventory(adjusted);
         cacheSet(OFFLINE_KEYS.inventory, adjusted);
         setLastInv({ ...offlineSale, inv_num:invNum, _offline:true });
-        setCart([]); setCustomer(null); setDiscount(0); setPromoCode(''); setPromoResult(null); setLoyaltyRedeem(0);
+        setCart([]); setCustomer(null); setDiscount(0); setPromoCode(''); setPromoResult(null); setLoyaltyRedeem(0); setPickedSerials({});
         setSaving(false);
         return;
       }
@@ -169,7 +187,8 @@ export default function POS({ tenant, activeBranch, user }) {
         tenant_id:tenant.id, branch_id:activeBranch?.id, session_id:session?.id,
         inv_num:invNum, date:new Date().toISOString().slice(0,10),
         customer:customer?.name||'Walk-in', customer_id:customer?.id,
-        items:cart, subtotal, gst_amount:gstTotal,
+        items:cart.map(li => pickedSerials[li.id]?.length ? { ...li, serials:pickedSerials[li.id].map(s=>s.serial_no) } : li),
+        subtotal, gst_amount:gstTotal,
         discount, promo_code:promoCode||null, promo_discount:discount,
         total, payment_mode:payMode, status:'paid',
       }).select().single();
@@ -177,6 +196,18 @@ export default function POS({ tenant, activeBranch, user }) {
       for (const item of cart) {
         const inv = inventory.find(i => i.id === item.id);
         if (inv) await supabase.from('inventory').update({ stock:Math.max(0,(inv.stock||0)-item.qty) }).eq('id', item.id);
+      }
+
+      // Link the specific physical units sold to this invoice
+      for (const [itemId, chosen] of Object.entries(pickedSerials)) {
+        for (const row of chosen) {
+          await supabase.from('item_serials').update({
+            status:'sold', sale_id:sale.id, invoice_no:invNum,
+            customer:customer?.name||'Walk-in', customer_id:customer?.id||null,
+            sold_price:cart.find(x=>x.id===itemId)?.rate||null,
+            sold_date:new Date().toISOString().slice(0,10),
+          }).eq('id', row.id);
+        }
       }
 
       if (customer?.id) {
@@ -191,7 +222,7 @@ export default function POS({ tenant, activeBranch, user }) {
       if (promoResult?.promo) await supabase.from('promo_codes').update({ uses_count:(promoResult.promo.uses_count||0)+1 }).eq('id', promoResult.promo.id);
 
       setLastInv({ ...sale, inv_num: invNum });
-      setCart([]); setCustomer(null); setDiscount(0); setPromoCode(''); setPromoResult(null); setLoyaltyRedeem(0);
+      setCart([]); setCustomer(null); setDiscount(0); setPromoCode(''); setPromoResult(null); setLoyaltyRedeem(0); setPickedSerials({});
       await load();
     } catch(e) { alert('Checkout error: '+e.message); }
     finally { setSaving(false); }
@@ -479,6 +510,50 @@ export default function POS({ tenant, activeBranch, user }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+
+      {/* ── Serial / IMEI picker ───────────────────────────── */}
+      {serialPick && (
+        <div onClick={()=>setSerialPick(null)} style={{ position:'fixed', inset:0, background:'rgba(17,24,39,.5)', zIndex:310, display:'flex', alignItems:'center', justifyContent:'center', padding:20 }}>
+          <div onClick={e=>e.stopPropagation()} style={{ background:T.srf, borderRadius:15, padding:24, width:'100%', maxWidth:460, maxHeight:'82vh', display:'flex', flexDirection:'column', boxShadow:'0 20px 60px rgba(0,0,0,.25)' }}>
+            <div style={{ display:'flex', justifyContent:'space-between', marginBottom:5 }}>
+              <div style={{ fontSize:15, fontWeight:800, color:T.red }}>Select {serialPick.item.serial_label||'Serial No'}</div>
+              <button onClick={()=>setSerialPick(null)} style={{ background:'none', border:'none', fontSize:21, cursor:'pointer', color:T.muted }}>×</button>
+            </div>
+            <div style={{ fontSize:11.5, color:T.sub, marginBottom:14 }}>
+              {serialPick.item.name} — pick the unit(s) you're handing over
+              {(pickedSerials[serialPick.item.id]||[]).length>0 && <strong style={{ color:T.green }}> · {(pickedSerials[serialPick.item.id]||[]).length} selected</strong>}
+            </div>
+
+            <div style={{ flex:1, overflowY:'auto', border:`1px solid ${T.bdr}`, borderRadius:9 }}>
+              {serialPick.options.length===0
+                ? <div style={{ padding:'34px 18px', textAlign:'center', color:T.muted }}>
+                    <div style={{ fontSize:30, marginBottom:8 }}>📭</div>
+                    <div style={{ fontSize:13, fontWeight:600 }}>No units in stock for this product</div>
+                    <div style={{ fontSize:11, marginTop:4 }}>Add serials under Inventory → Serial Registry</div>
+                  </div>
+                : serialPick.options.map(o=>{
+                    const on = (pickedSerials[serialPick.item.id]||[]).some(s=>s.id===o.id);
+                    return (
+                      <div key={o.id} onClick={()=>chooseSerial(serialPick.item.id, o)}
+                        style={{ display:'flex', alignItems:'center', gap:10, padding:'11px 14px', cursor:'pointer', borderBottom:`1px solid ${T.bdr}33`, background: on?'#F0FDF4':'transparent' }}>
+                        <div style={{ width:18, height:18, borderRadius:5, border:`2px solid ${on?T.green:T.bdr}`, background:on?T.green:'transparent', display:'flex', alignItems:'center', justifyContent:'center', color:'#fff', fontSize:12, fontWeight:900 }}>{on?'✓':''}</div>
+                        <div style={{ flex:1 }}>
+                          <div style={{ fontFamily:'monospace', fontSize:12.5, fontWeight:700, color:T.ink }}>{o.serial_no}</div>
+                          {o.serial_alt && <div style={{ fontFamily:'monospace', fontSize:10, color:T.muted }}>{o.serial_alt}</div>}
+                        </div>
+                      </div>
+                    );
+                  })}
+            </div>
+
+            <button onClick={()=>setSerialPick(null)}
+              style={{ marginTop:14, background:T.red, color:'#fff', border:'none', borderRadius:9, padding:'12px', fontSize:13.5, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+              Done
+            </button>
           </div>
         </div>
       )}

@@ -6,7 +6,7 @@ import PurchaseOrders        from './PurchaseOrders';
 import GoodsReceiptNote      from './GoodsReceiptNote';
 import BillScanner           from './BillScanner';
 import PurchaseRequisitions  from './PurchaseRequisitions';
-import Suppliers             from './Suppliers';
+import PartiesDashboard      from './PartiesDashboard';
 import SupplierPayments      from './SupplierPayments';
 import SupplierScorecard     from './SupplierScorecard';
 import SupplierRFQ           from './SupplierRFQ';
@@ -42,7 +42,7 @@ export default function PurchHub({ tenant, deepTab, role = 'owner' }) {
         {tab==='scan'        && <BillScanner          tenant={tenant}/>}
         {tab==='grn'         && <GoodsReceiptNote     tenant={tenant}/>}
         {tab==='requisitions'&& <PurchaseRequisitions tenant={tenant}/>}
-        {tab==='suppliers'   && <Suppliers            tenant={tenant}/>}
+        {tab==='suppliers'   && <PartiesDashboard      tenant={tenant} role={role} onSwitchTab={setTab} initialView='suppliers'/>}
         {tab==='payments'    && <SupplierPayments     tenant={tenant}/>}
         {tab==='scorecard'   && <SupplierScorecard    tenant={tenant}/>}
         {tab==='rfq'         && <SupplierRFQ          tenant={tenant}/>}
