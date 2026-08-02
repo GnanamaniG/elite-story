@@ -43,8 +43,50 @@ export const getSession = () => supabase.auth.getSession();
 
 // ── Tenant helpers ─────────────────────────────────────────────
 export async function getTenant(userId) {
-  const { data } = await supabase.from('users').select('*, tenant:tenants(*)').eq('auth_id', userId).single();
+  const { data } = await supabase.from('users').select('*, tenant:tenants(*)').eq('auth_id', userId).maybeSingle();
   return data;
+}
+
+/**
+ * Runs once, the first time a signed-up user reaches the app with no
+ * business attached yet. Handles two cases:
+ *  1. An invited staff member — a `users` row was already created (by
+ *     Team → Invite) with their email but auth_id still NULL. Link it.
+ *  2. A brand-new business owner — nobody has a users row for this
+ *     email. Create the tenant and the owner's users row together.
+ * Without this, signUp() alone never creates a business at all — it
+ * only creates the auth account.
+ */
+export async function provisionOrLinkTenant(authUser) {
+  const { data: pending } = await supabase.from('users')
+    .select('*, tenant:tenants(*)')
+    .eq('email', authUser.email)
+    .is('auth_id', null)
+    .maybeSingle();
+
+  if (pending) {
+    const { error } = await supabase.from('users').update({ auth_id: authUser.id }).eq('id', pending.id);
+    if (error) throw error;
+    return { ...pending, auth_id: authUser.id };
+  }
+
+  const meta = authUser.user_metadata || {};
+  const { data: newTenant, error: tErr } = await supabase.from('tenants').insert({
+    name: meta.biz_name || 'My Business',
+    owner_email: authUser.email,
+    business_type: meta.biz_type || 'retail',
+    onboarded: false,
+  }).select().single();
+  if (tErr) throw tErr;
+
+  const { data: newUserRow, error: uErr } = await supabase.from('users').insert({
+    tenant_id: newTenant.id, auth_id: authUser.id,
+    name: meta.biz_name || authUser.email, email: authUser.email,
+    role: 'owner', active: true,
+  }).select().single();
+  if (uErr) throw uErr;
+
+  return { ...newUserRow, tenant: newTenant };
 }
 
 export async function updateTenantSettings(tenantId, updates) {

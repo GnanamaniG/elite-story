@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { supabase, getTenant } from '../lib/supabase';
+import { supabase, getTenant, provisionOrLinkTenant } from '../lib/supabase';
 
 export function useAuth() {
   const [user,    setUser]    = useState(null);
@@ -10,10 +10,16 @@ export function useAuth() {
     if (!authUser) { setUser(null); setTenant(null); setLoading(false); return; }
     setUser(authUser);
     try {
-      const profile = await getTenant(authUser.id);
+      let profile = await getTenant(authUser.id);
+      if (!profile?.tenant) {
+        // First time this signed-up user has reached the app with no
+        // business attached — create it now (or link a pending staff invite).
+        profile = await provisionOrLinkTenant(authUser);
+      }
       setTenant(profile?.tenant || null);
     } catch (e) {
-      console.warn('No tenant profile yet:', e.message);
+      console.warn('Could not load or create tenant:', e.message);
+      setTenant(null);
     } finally {
       setLoading(false);
     }
