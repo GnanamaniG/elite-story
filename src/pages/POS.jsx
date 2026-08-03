@@ -39,6 +39,7 @@ export default function POS({ tenant, activeBranch, user }) {
   const [heldBills,   setHeldBills]   = useState([]);
   const [saving,      setSaving]      = useState(false);
   const [lastInv,     setLastInv]     = useState(null);
+  const [sendingBill,  setSendingBill]  = useState(false);
   const [splitPay,    setSplitPay]    = useState(false);
   const [splitAmounts,setSplitAmounts]= useState({ cash:0, upi:0, card:0 });
   const [loyaltyRedeem,setLoyaltyRedeem]=useState(0);
@@ -279,16 +280,118 @@ export default function POS({ tenant, activeBranch, user }) {
     w.document.write(html); w.document.close();
   }
 
-  function sendBillWhatsApp(sale) {
+  // Renders the bill as a real image (not text) — 700px wide receipt,
+  // native resolution so it's crisp when opened full-screen on WhatsApp.
+  function renderBillImage(sale) {
+    const cv = document.createElement('canvas');
+    const W = 700, LH = 30;
+    const lines = sale.items||[];
+    const H = 340 + lines.length*LH + (sale.discount>0?LH:0);
+    cv.width = W; cv.height = H;
+    const ctx = cv.getContext('2d');
+
+    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle = '#7B1E1E'; ctx.fillRect(0,0,W,86);
+    ctx.fillStyle = '#FFFFFF'; ctx.font = '900 26px Arial'; ctx.fillText(tenant?.name||'Our Store', 28, 40);
+    ctx.font = '500 13px Arial'; ctx.fillText(`Invoice ${sale.inv_num}  ·  ${sale.date}`, 28, 64);
+
+    let y = 120;
+    ctx.fillStyle = '#6B7280'; ctx.font = '700 11px Arial';
+    ctx.fillText('ITEM', 28, y); ctx.fillText('QTY', W-220, y); ctx.fillText('AMOUNT', W-100, y);
+    y += 14; ctx.strokeStyle = '#E8DEDE'; ctx.beginPath(); ctx.moveTo(28,y); ctx.lineTo(W-28,y); ctx.stroke();
+    y += 24;
+
+    ctx.font = '600 15px Arial'; ctx.fillStyle = '#111827';
+    lines.forEach(li => {
+      ctx.fillText(li.name.length>36?li.name.slice(0,34)+'…':li.name, 28, y);
+      ctx.fillStyle = '#6B7280'; ctx.fillText(String(li.qty), W-215, y);
+      ctx.fillStyle = '#C0392B'; ctx.font = '700 15px Arial'; ctx.fillText(fmt(li.amount), W-140, y);
+      ctx.fillStyle = '#111827'; ctx.font = '600 15px Arial';
+      y += LH;
+    });
+
+    y += 6; ctx.strokeStyle = '#E8DEDE'; ctx.beginPath(); ctx.moveTo(28,y); ctx.lineTo(W-28,y); ctx.stroke(); y += 28;
+
+    const row = (label, val, bold) => {
+      ctx.font = bold ? '900 20px Arial' : '500 14px Arial';
+      ctx.fillStyle = bold ? '#111827' : '#6B7280';
+      ctx.fillText(label, 28, y);
+      ctx.fillStyle = bold ? '#16A34A' : '#111827';
+      ctx.textAlign = 'right'; ctx.fillText(val, W-28, y); ctx.textAlign = 'left';
+      y += bold ? 34 : 24;
+    };
+    row('Subtotal', fmt(sale.subtotal));
+    row('CGST', fmt((sale.gst_amount||0)/2));
+    row('SGST', fmt((sale.gst_amount||0)/2));
+    if (sale.discount>0) row('Discount', '-'+fmt(sale.discount));
+    row('TOTAL', fmt(sale.total), true);
+
+    ctx.fillStyle = '#9CA3AF'; ctx.font = '500 12px Arial';
+    ctx.fillText('Thank you for shopping with us! 🙏', 28, H-16);
+
+    return new Promise(resolve => cv.toBlob(blob => resolve(blob), 'image/png'));
+  }
+
+  async function sendBillWhatsApp(sale) {
     const phone = (sale.customerPhone||'').replace(/\D/g,'');
     if (!phone) { alert('No phone number on this bill — attach a customer with a phone number to send on WhatsApp.'); return; }
+    setSendingBill(true);
     const to = phone.length===10 ? '91'+phone : phone.replace(/^0/,'91');
-    const biz = tenant?.name || 'Our Store';
-    const lines = (sale.items||[]).map(i => `${i.name} x${i.qty} — ${fmt(i.amount)}`).join('\n');
-    const msg = `*${biz}*\nInvoice: *${sale.inv_num}*\nDate: ${sale.date}\n\n${lines}\n\nSubtotal: ${fmt(sale.subtotal)}\nCGST: ${fmt((sale.gst_amount||0)/2)}\nSGST: ${fmt((sale.gst_amount||0)/2)}` +
-      (sale.discount>0 ? `\nDiscount: -${fmt(sale.discount)}` : '') +
-      `\n*Total: ${fmt(sale.total)}*\n\nThank you for shopping with us! 🙏`;
-    window.open(`https://wa.me/${to}?text=${encodeURIComponent(msg)}`, '_blank');
+
+    const { data: cfg } = await supabase.from('marketing_integrations').select('*').eq('tenant_id', tenant.id).maybeSingle();
+    const canSendImage = cfg?.meta_access_token && cfg?.wa_phone_number_id && cfg?.wa_receipt_template_name;
+
+    if (!canSendImage) {
+      // Not connected yet — fall back to the manual text-link method
+      // rather than failing outright.
+      const biz = tenant?.name || 'Our Store';
+      const lines = (sale.items||[]).map(i => `${i.name} x${i.qty} — ${fmt(i.amount)}`).join('\n');
+      const msg = `*${biz}*\nInvoice: *${sale.inv_num}*\nDate: ${sale.date}\n\n${lines}\n\nSubtotal: ${fmt(sale.subtotal)}\nCGST: ${fmt((sale.gst_amount||0)/2)}\nSGST: ${fmt((sale.gst_amount||0)/2)}` +
+        (sale.discount>0 ? `\nDiscount: -${fmt(sale.discount)}` : '') +
+        `\n*Total: ${fmt(sale.total)}*\n\nThank you for shopping with us! 🙏`;
+      window.open(`https://wa.me/${to}?text=${encodeURIComponent(msg)}`, '_blank');
+      setSendingBill(false);
+      return;
+    }
+
+    try {
+      const blob = await renderBillImage(sale);
+      const path = `${tenant.id}/bill-${sale.inv_num}-${Date.now()}.png`;
+      const { error: upErr } = await supabase.storage.from('campaign-images').upload(path, blob, { upsert:false, contentType:'image/png' });
+      if (upErr) throw upErr;
+      const { data: pub } = supabase.storage.from('campaign-images').getPublicUrl(path);
+
+      const resp = await fetch(`https://graph.facebook.com/v20.0/${cfg.wa_phone_number_id}/messages`, {
+        method:'POST',
+        headers:{ 'Authorization':`Bearer ${cfg.meta_access_token}`, 'Content-Type':'application/json' },
+        body: JSON.stringify({
+          messaging_product:'whatsapp', to,
+          type:'template',
+          template:{
+            name: cfg.wa_receipt_template_name,
+            language:{ code:cfg.wa_receipt_template_lang||'en' },
+            components:[
+              { type:'header', parameters:[{ type:'image', image:{ link: pub.publicUrl } }] },
+              { type:'body', parameters:[
+                { type:'text', text: sale.customer||'Customer' },
+                { type:'text', text: sale.inv_num },
+                { type:'text', text: fmt(sale.total) },
+              ]},
+            ],
+          },
+        }),
+      });
+      if (!resp.ok) {
+        const err = await resp.json().catch(()=>({}));
+        throw new Error(err.error?.message || `WhatsApp API returned ${resp.status}`);
+      }
+      alert('Bill image sent on WhatsApp ✅');
+    } catch (e) {
+      alert('Could not send the bill image automatically: '+e.message+'\n\nFalling back to the manual method.');
+      window.open(`https://wa.me/${to}?text=${encodeURIComponent('Invoice '+sale.inv_num+' — Total '+fmt(sale.total))}`, '_blank');
+    } finally {
+      setSendingBill(false);
+    }
   }
 
   const categories   = ['all', ...new Set(inventory.map(i=>i.cat||i.category).filter(Boolean))];
@@ -609,9 +712,9 @@ export default function POS({ tenant, activeBranch, user }) {
           {lastInv&&(
             <div style={{ display:'flex', gap:8 }}>
               <button onClick={()=>printReceipt(lastInv)} style={{ flex:1, background:T.blue+'22', color:T.blue, border:'none', borderRadius:8, padding:'10px', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>🖨️ Print — {lastInv.inv_num}</button>
-              <button onClick={()=>sendBillWhatsApp(lastInv)} disabled={!lastInv.customerPhone}
+              <button onClick={()=>sendBillWhatsApp(lastInv)} disabled={!lastInv.customerPhone||sendingBill}
                 title={lastInv.customerPhone?'':'No phone number on this bill'}
-                style={{ flex:1, background: lastInv.customerPhone?'#DCFCE7':T.card, color: lastInv.customerPhone?T.green:T.muted, border:'none', borderRadius:8, padding:'10px', fontSize:12, fontWeight:700, cursor: lastInv.customerPhone?'pointer':'not-allowed', fontFamily:'inherit' }}>💬 Send on WhatsApp</button>
+                style={{ flex:1, background: lastInv.customerPhone?'#DCFCE7':T.card, color: lastInv.customerPhone?T.green:T.muted, border:'none', borderRadius:8, padding:'10px', fontSize:12, fontWeight:700, cursor: lastInv.customerPhone&&!sendingBill?'pointer':'not-allowed', fontFamily:'inherit' }}>{sendingBill?'Sending…':'💬 Send on WhatsApp'}</button>
             </div>
           )}
         </div>

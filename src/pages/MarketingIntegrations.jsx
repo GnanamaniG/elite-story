@@ -15,6 +15,7 @@ export default function MarketingIntegrations({ tenant, role='owner' }) {
   const [form, setForm] = useState({
     openai_api_key:'', meta_access_token:'', meta_app_id:'', ig_business_id:'',
     wa_phone_number_id:'', wa_business_account_id:'', wa_template_name:'', wa_template_lang:'en',
+    wa_receipt_template_name:'', wa_receipt_template_lang:'en',
   });
   const [id, setId] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -114,6 +115,25 @@ export default function MarketingIntegrations({ tenant, role='owner' }) {
           'Create a Message Template under Message Templates — WhatsApp requires business-initiated messages to use a pre-approved template, you cannot send free-form text to someone who has not messaged you first',
           'Submit the template for approval — usually reviewed within 24 hours, sometimes longer',
           'Once APPROVED (not just submitted), copy its exact name and language code above',
+        ]} link="https://business.facebook.com/wa/manage"/>
+      </Section>
+
+      {/* Bill/receipt template — a SEPARATE template from marketing above */}
+      <Section title="🧾 Bill / Receipt Template" desc="A different template category from marketing — needed to send the itemised bill image after a sale">
+        <div style={{ background:'#FFFBEB', border:'1px solid #FDE68A', borderRadius:9, padding:'11px 14px', marginBottom:14, fontSize:11.5, color:T.amber, lineHeight:1.6 }}>
+          ⚠️ This must be created as a <strong>Utility</strong> template in Meta, not Marketing — a receipt is transactional,
+          and using a Marketing-category template for it risks your WhatsApp number being flagged. It needs an <strong>Image header</strong>
+          and a body with exactly 3 text variables, in this order: customer name, invoice number, total amount.
+        </div>
+        <Field label="Approved Receipt Template Name" value={form.wa_receipt_template_name} onChange={v=>setForm(f=>({...f,wa_receipt_template_name:v}))} placeholder="e.g. order_receipt"/>
+        <Field label="Template Language Code" value={form.wa_receipt_template_lang} onChange={v=>setForm(f=>({...f,wa_receipt_template_lang:v}))} placeholder="en"/>
+        <Guide steps={[
+          'In WhatsApp Manager, create a new template and set its category to Utility (not Marketing)',
+          'Add a Header component of type Image',
+          'Add a Body with exactly 3 variables, e.g. "Hi {{1}}, thanks for your purchase! Invoice {{2}} — Total {{3}}. See your bill above."',
+          'Submit for approval — Utility templates are usually approved faster than Marketing ones',
+          'Once APPROVED, copy the exact template name and language code above',
+          'Until this is set up, the Send on WhatsApp button in POS falls back to opening a manual text-only chat instead',
         ]} link="https://business.facebook.com/wa/manage"/>
       </Section>
 
