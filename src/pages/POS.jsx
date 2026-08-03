@@ -20,6 +20,7 @@ export default function POS({ tenant, activeBranch, user }) {
   const [cart,        setCart]        = useState([]);
   const [customer,    setCustomer]    = useState(null);
   const [customers,   setCustomers]   = useState([]);
+  const [loadError,   setLoadError]   = useState(null);
   const [search,      setSearch]      = useState('');
   const [custSearch,  setCustSearch]  = useState('');
   const [cat,         setCat]         = useState('all');
@@ -94,16 +95,28 @@ export default function POS({ tenant, activeBranch, user }) {
     try {
       const [inv, custs, promos] = await Promise.all([
         supabase.from('inventory').select('*').eq('tenant_id', tenant.id).eq('active', true).order('name'),
-        supabase.from('customers').select('id,name,phone,loyalty_pts,outstanding,total_spent,purchase_count').eq('tenant_id', tenant.id).order('name'),
+        supabase.from('customers').select('*').eq('tenant_id', tenant.id).order('name'),
         supabase.from('promo_codes').select('*').eq('tenant_id', tenant.id).eq('active', true),
       ]);
+      // Supabase never throws on a failed query — it resolves with
+      // { data: null, error }. Checking .error explicitly is what lets
+      // us actually SEE a broken query instead of it silently looking
+      // like "there's just no data".
+      const errors = [];
+      if (inv.error)   errors.push('Products: '+inv.error.message);
+      if (custs.error) errors.push('Customers: '+custs.error.message);
+      if (promos.error) errors.push('Promo codes: '+promos.error.message);
+      setLoadError(errors.length ? errors.join(' · ') : null);
+      if (errors.length) console.error('POS load() query errors:', { inv:inv.error, custs:custs.error, promos:promos.error });
+
       setInventory(inv.data||[]);
       setCustomers(custs.data||[]);
       setPromoCodes(promos.data||[]);
       // Refresh the offline cache while we have a connection
       if (inv.data)   cacheSet(OFFLINE_KEYS.inventory, inv.data);
       if (custs.data) cacheSet(OFFLINE_KEYS.customers, custs.data);
-    } catch {
+    } catch (e) {
+      setLoadError('Could not reach the server — '+(e.message||'unknown error'));
       const [ci, cc] = await Promise.all([
         cacheGet(OFFLINE_KEYS.inventory),
         cacheGet(OFFLINE_KEYS.customers),
@@ -355,6 +368,16 @@ export default function POS({ tenant, activeBranch, user }) {
         </div>
       )}
 
+      {/* Data load error — visible on screen, not just the console, since
+          the person using POS won't have developer tools open */}
+      {loadError && (
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'8px 14px',
+                      background:'#FEF2F2', borderBottom:'1px solid #FECACA', fontSize:11.5, flexShrink:0 }}>
+          <span style={{ color:T.red, fontWeight:600 }}>⚠️ Some data failed to load: {loadError}</span>
+          <button onClick={load} style={{ background:'#fff', color:T.red, border:'1px solid #FECACA', borderRadius:6, padding:'4px 12px', fontSize:10.5, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Retry</button>
+        </div>
+      )}
+
     <div style={{ display:'grid', gridTemplateColumns:'1fr 380px', flex:1, minHeight:0 }}>
       {/* Left */}
       <div style={{ display:'flex', flexDirection:'column', overflow:'hidden', borderRight:`1px solid ${T.bdr}` }}>
@@ -488,7 +511,7 @@ export default function POS({ tenant, activeBranch, user }) {
                         <div style={{ padding:'14px 13px', textAlign:'center' }}>
                           <div style={{ fontSize:12, color:T.muted, marginBottom:9 }}>
                             {customers.length===0
-                              ? 'No customers in the system yet'
+                              ? (loadError ? 'Could not load customers — see the error banner above' : 'No customers in the system yet')
                               : `No customer matches "${custSearch}"`}
                           </div>
                           <button type="button" onClick={()=>{ setNewCust(n=>({ ...n, name:/^\d+$/.test(custSearch)?'':custSearch, phone:/^\d+$/.test(custSearch)?custSearch:'' })); setShowNewCust(true); }}
