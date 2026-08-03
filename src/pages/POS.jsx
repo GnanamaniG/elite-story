@@ -40,6 +40,7 @@ export default function POS({ tenant, activeBranch, user }) {
   const [saving,      setSaving]      = useState(false);
   const [lastInv,     setLastInv]     = useState(null);
   const [sendingBill,  setSendingBill]  = useState(false);
+  const [billSendMsg,  setBillSendMsg]  = useState(null); // {ok:bool, text:string} — non-blocking status, replaces alert()
   const [splitPay,    setSplitPay]    = useState(false);
   const [splitAmounts,setSplitAmounts]= useState({ cash:0, upi:0, card:0 });
   const [loyaltyRedeem,setLoyaltyRedeem]=useState(0);
@@ -260,9 +261,16 @@ export default function POS({ tenant, activeBranch, user }) {
 
       if (promoResult?.promo) await supabase.from('promo_codes').update({ uses_count:(promoResult.promo.uses_count||0)+1 }).eq('id', promoResult.promo.id);
 
-      setLastInv({ ...sale, inv_num: invNum, customerPhone:customer?.phone||'' });
+      const completedSale = { ...sale, inv_num: invNum, customerPhone:customer?.phone||'' };
+      setLastInv(completedSale);
       setCart([]); setCustomer(null); setDiscount(0); setManualDisc(''); setPromoCode(''); setPromoResult(null); setLoyaltyRedeem(0); setPickedSerials({});
       await load();
+
+      // Auto-send the bill on checkout — only when a customer with a
+      // phone number is actually attached, so a plain walk-in cash sale
+      // never triggers anything. Runs silently: no alert popups, just
+      // the small on-screen status banner near the Print/Send buttons.
+      if (completedSale.customerPhone) sendBillWhatsApp(completedSale, true);
     } catch(e) { alert('Checkout error: '+e.message); }
     finally { setSaving(false); }
   }
@@ -332,18 +340,29 @@ export default function POS({ tenant, activeBranch, user }) {
     return new Promise(resolve => cv.toBlob(blob => resolve(blob), 'image/png'));
   }
 
-  async function sendBillWhatsApp(sale) {
+  async function sendBillWhatsApp(sale, silent=false) {
     const phone = (sale.customerPhone||'').replace(/\D/g,'');
-    if (!phone) { alert('No phone number on this bill — attach a customer with a phone number to send on WhatsApp.'); return; }
-    setSendingBill(true);
+    if (!phone) {
+      if (!silent) alert('No phone number on this bill — attach a customer with a phone number to send on WhatsApp.');
+      return;
+    }
+    setSendingBill(true); setBillSendMsg(null);
     const to = phone.length===10 ? '91'+phone : phone.replace(/^0/,'91');
 
     const { data: cfg } = await supabase.from('marketing_integrations').select('*').eq('tenant_id', tenant.id).maybeSingle();
     const canSendImage = cfg?.meta_access_token && cfg?.wa_phone_number_id && cfg?.wa_receipt_template_name;
 
     if (!canSendImage) {
-      // Not connected yet — fall back to the manual text-link method
-      // rather than failing outright.
+      // Not connected yet — fall back to the manual text-link method.
+      // Only actually pop the window open on a direct click (silent=false):
+      // a window.open() this far after an await gets silently blocked by
+      // most browsers when there was no direct user gesture, so auto-firing
+      // it after checkout would just fail invisibly. Show a status instead.
+      if (silent) {
+        setBillSendMsg({ ok:false, text:'WhatsApp not connected — tap Send on WhatsApp to send this bill manually' });
+        setSendingBill(false);
+        return;
+      }
       const biz = tenant?.name || 'Our Store';
       const lines = (sale.items||[]).map(i => `${i.name} x${i.qty} — ${fmt(i.amount)}`).join('\n');
       const msg = `*${biz}*\nInvoice: *${sale.inv_num}*\nDate: ${sale.date}\n\n${lines}\n\nSubtotal: ${fmt(sale.subtotal)}\nCGST: ${fmt((sale.gst_amount||0)/2)}\nSGST: ${fmt((sale.gst_amount||0)/2)}` +
@@ -385,10 +404,16 @@ export default function POS({ tenant, activeBranch, user }) {
         const err = await resp.json().catch(()=>({}));
         throw new Error(err.error?.message || `WhatsApp API returned ${resp.status}`);
       }
-      alert('Bill image sent on WhatsApp ✅');
+      setBillSendMsg({ ok:true, text:'Bill image sent on WhatsApp ✅' });
+      setTimeout(()=>setBillSendMsg(null), 4000);
     } catch (e) {
-      alert('Could not send the bill image automatically: '+e.message+'\n\nFalling back to the manual method.');
-      window.open(`https://wa.me/${to}?text=${encodeURIComponent('Invoice '+sale.inv_num+' — Total '+fmt(sale.total))}`, '_blank');
+      setBillSendMsg({ ok:false, text:'Auto-send failed ('+e.message+') — tap Send on WhatsApp to try manually' });
+      // Note: NOT auto-opening wa.me here when this ran automatically after
+      // checkout — a window.open() call this far removed from a direct click
+      // gets silently blocked by most browsers' popup blockers anyway, and a
+      // failed silent popup is worse than a clear on-screen message telling
+      // the cashier to tap the button themselves.
+      if (!silent) window.open(`https://wa.me/${to}?text=${encodeURIComponent('Invoice '+sale.inv_num+' — Total '+fmt(sale.total))}`, '_blank');
     } finally {
       setSendingBill(false);
     }
@@ -715,6 +740,14 @@ export default function POS({ tenant, activeBranch, user }) {
               <button onClick={()=>sendBillWhatsApp(lastInv)} disabled={!lastInv.customerPhone||sendingBill}
                 title={lastInv.customerPhone?'':'No phone number on this bill'}
                 style={{ flex:1, background: lastInv.customerPhone?'#DCFCE7':T.card, color: lastInv.customerPhone?T.green:T.muted, border:'none', borderRadius:8, padding:'10px', fontSize:12, fontWeight:700, cursor: lastInv.customerPhone&&!sendingBill?'pointer':'not-allowed', fontFamily:'inherit' }}>{sendingBill?'Sending…':'💬 Send on WhatsApp'}</button>
+            </div>
+          )}
+          {billSendMsg && (
+            <div style={{ marginTop:6, padding:'7px 11px', borderRadius:7, fontSize:11,
+                          background: billSendMsg.ok?'#F0FDF4':'#FFFBEB',
+                          color: billSendMsg.ok?T.green:T.amber,
+                          border:`1px solid ${billSendMsg.ok?'#BBF7D0':'#FDE68A'}` }}>
+              {billSendMsg.ok?'✅':'⚠️'} {billSendMsg.text}
             </div>
           )}
         </div>
