@@ -44,7 +44,7 @@ export const ROLE_TABS = {
     manager:    '*',
     accountant: ['valuation','aging','history'],
     cashier:    ['products'],
-    staff:      ['products','batches','audit','barcode','qr','adjust'],
+    staff:      ['products','batches','audit','barcode','qr','adjust','repairs'],
   },
   saleshub: {
     manager:    '*',
@@ -80,7 +80,7 @@ export const ROLE_TABS = {
     manager:    '*',
     accountant: ['eod'],
     cashier:    ['cash','handover','eod'],
-    staff:      ['repairs','service'],
+    staff:      ['service'],
   },
   toolshub: {
     manager:    ['alerts','ai','docs','notify','docexpiry'],

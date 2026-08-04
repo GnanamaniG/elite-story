@@ -36,6 +36,7 @@ export const DESTINATIONS = [
   { id:'invhub', tab:'batches', label:'Batch & Expiry', group:'Inventory', icon:'🏷️', keys:'batch expiry' },
   { id:'invhub', tab:'serials', label:'Serial / IMEI', group:'Inventory', icon:'🔢', keys:'serial imei' },
   { id:'invhub', tab:'adjust', label:'Adjustments', group:'Inventory', icon:'📋', keys:'adjustments' },
+  { id:'invhub', tab:'repairs', label:'Repairs', group:'Inventory', icon:'🔨', keys:'repairs' },
   { id:'invhub', tab:'audit', label:'Stock Audit', group:'Inventory', icon:'✅', keys:'stock audit' },
   { id:'invhub', tab:'transfer', label:'Transfers', group:'Inventory', icon:'🔀', keys:'transfers' },
   { id:'invhub', tab:'reorder', label:'Reorder', group:'Inventory', icon:'🔄', keys:'reorder' },
@@ -128,7 +129,6 @@ export const DESTINATIONS = [
   { id:'opshub', tab:'handover', label:'Shift Handover', group:'Operations', icon:'🔄', keys:'shift handover' },
   { id:'opshub', tab:'eod', label:'EOD Report', group:'Operations', icon:'🌙', keys:'eod report' },
   { id:'opshub', tab:'service', label:'Service Bays', group:'Operations', icon:'🔧', keys:'service bays' },
-  { id:'opshub', tab:'repairs', label:'Repairs', group:'Operations', icon:'🔨', keys:'repairs' },
   { id:'opshub', tab:'qc', label:'Quality Control', group:'Operations', icon:'✅', keys:'quality control' },
   { id:'opshub', tab:'reorder', label:'Reorder Mgmt', group:'Operations', icon:'🔄', keys:'reorder mgmt' },
 

@@ -320,7 +320,9 @@ export default function POS({ tenant, activeBranch, user }) {
     ctx.fillText(fmt(sale.total), W/2, 250);
 
     // Status badge
-    const balanceDue = Math.max(0, (sale.total||0) - (sale.amount_paid ?? sale.total ?? 0));
+    // Same reasoning as PublicInvoice.jsx — POS has no partial/credit
+    // tracking today, so every bill it generates is fully paid.
+    const balanceDue = 0;
     const paid = balanceDue <= 0.5;
     const badgeLabel = paid ? 'FULLY PAID' : `BALANCE DUE ${fmt(balanceDue)}`;
     const badgeColor = paid ? '#16A34A' : '#D97706';

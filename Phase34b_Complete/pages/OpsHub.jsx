@@ -6,7 +6,6 @@ import CashRegister  from './CashRegister';
 import ShiftHandover from './ShiftHandover';
 import EODReport     from './EODReport';
 import ServiceBays   from './ServiceBays';
-import Repairs       from './Repairs';
 import QualityControl from './QualityControl';
 import ReorderManagement from './ReorderManagement';
 
@@ -16,7 +15,6 @@ const TABS = [
   { id:'handover',  label:'Shift Handover', icon:'🔄' },
   { id:'eod',       label:'EOD Report',     icon:'🌙' },
   { id:'service',   label:'Service Bays',   icon:'🔧' },
-  { id:'repairs',   label:'Repairs',        icon:'🔨' },
   { id:'qc',        label:'Quality Control',icon:'✅' },
   { id:'reorder',   label:'Reorder Mgmt',   icon:'🔄' },
 ];
@@ -36,7 +34,6 @@ export default function OpsHub({ tenant, deepTab, role = 'owner' }) {
         {tab==='handover'   && <ShiftHandover      tenant={tenant}/>}
         {tab==='eod'        && <EODReport          tenant={tenant}/>}
         {tab==='service'    && <ServiceBays        tenant={tenant}/>}
-        {tab==='repairs'    && <Repairs            tenant={tenant}/>}
         {tab==='qc'         && <QualityControl     tenant={tenant}/>}
         {tab==='reorder'    && <ReorderManagement  tenant={tenant}/>}
       </div>
