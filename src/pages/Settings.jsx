@@ -172,10 +172,17 @@ function BusinessTypeSection({ tenant, onTenantUpdate, T, inp, lbl }) {
   async function save() {
     setSaving(true);
     const labels = [...selected.map(id=>ALL_TYPES.find(t=>t.id===id)?.label).filter(Boolean), ...otherTypes];
+    // Merge suggested categories from every selected type into whatever
+    // categories already exist — union, never overwrite what's there.
+    // This is what makes the selection actually visible: these show up
+    // as quick-pick suggestions when adding a product in Inventory.
+    const suggested = [...new Set(selected.flatMap(id => RETAIL_TYPES.concat(OTHER_TYPES).find(t=>t.id===id)?.cats || []))];
+    const mergedCategories = [...new Set([...(tenant.categories||[]), ...suggested])];
     try {
       const updated = await updateTenantSettings(tenant.id, {
         business_types: labels,
         business_type: labels[0] || tenant.business_type || 'retail',
+        categories: mergedCategories,
       });
       onTenantUpdate?.(updated);
       setSaved(true); setTimeout(()=>setSaved(false), 3000);
@@ -245,6 +252,17 @@ function BusinessTypeSection({ tenant, onTenantUpdate, T, inp, lbl }) {
           </div>
         )}
       </div>
+
+      {selected.length>0 && (() => {
+        const preview = [...new Set(selected.flatMap(id => RETAIL_TYPES.concat(OTHER_TYPES).find(t=>t.id===id)?.cats || []))]
+          .filter(cc => !(tenant.categories||[]).includes(cc));
+        return preview.length>0 ? (
+          <div style={{ background:T.card2||'#FFF5F5', border:`1px solid ${T.bdr}`, borderRadius:9, padding:'10px 14px', marginBottom:14, fontSize:11.5, color:T.sub }}>
+            <strong style={{ color:T.darkRed }}>Saving will add these product categories:</strong> {preview.join(', ')}
+            <div style={{ fontSize:10, color:T.muted, marginTop:3 }}>They'll show up as quick-pick suggestions when adding a product under Inventory → Products.</div>
+          </div>
+        ) : null;
+      })()}
 
       <button type="button" onClick={save} disabled={saving}
         style={{ background:saved?T.green:T.red, color:'#fff', border:'none', borderRadius:8, padding:'10px 20px', fontSize:12.5, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>

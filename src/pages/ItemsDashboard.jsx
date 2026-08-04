@@ -405,9 +405,24 @@ export default function ItemsDashboard({ tenant, role='owner', onSwitchTab }) {
             <form onSubmit={saveItem}>
               <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:12 }}>
                 <div style={{ gridColumn:'1/-1' }}><label style={{ fontSize:10, color:T.sub, fontWeight:700, textTransform:'uppercase', display:'block', marginBottom:4 }}>Name *</label><input value={form.name} onChange={e=>setForm(f=>({...f,name:e.target.value}))} required style={inp}/></div>
-                {[['SKU / Code','code'],['Category','cat'],['HSN Code','hsn'],['Unit','unit']].map(([lb,key])=>(
+                {[['SKU / Code','code'],['HSN Code','hsn'],['Unit','unit']].map(([lb,key])=>(
                   <div key={key}><label style={{ fontSize:10, color:T.sub, fontWeight:700, textTransform:'uppercase', display:'block', marginBottom:4 }}>{lb}</label><input value={form[key]} onChange={e=>setForm(f=>({...f,[key]:e.target.value}))} style={inp}/></div>
                 ))}
+                <div style={{ gridColumn:'1/-1' }}>
+                  <label style={{ fontSize:10, color:T.sub, fontWeight:700, textTransform:'uppercase', display:'block', marginBottom:4 }}>Category</label>
+                  <input value={form.cat} onChange={e=>setForm(f=>({...f,cat:e.target.value}))} placeholder="e.g. Footwear" style={inp}/>
+                  {(tenant?.categories||[]).length>0 && (
+                    <div style={{ display:'flex', flexWrap:'wrap', gap:5, marginTop:6 }}>
+                      <span style={{ fontSize:9.5, color:T.muted, marginRight:2, alignSelf:'center' }}>Suggested from your business type:</span>
+                      {tenant.categories.filter(cc=>cc!==form.cat).slice(0,8).map(cc=>(
+                        <button key={cc} type="button" onClick={()=>setForm(f=>({...f,cat:cc}))}
+                          style={{ background:T.bg, border:`1px solid ${T.bdr}`, borderRadius:14, padding:'3px 10px', fontSize:10.5, color:T.sub, cursor:'pointer', fontFamily:'inherit' }}>
+                          {cc}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
                 {[['Sale Price *','sp'],['Cost Price *','cp'],['MRP','mrp'],['GST %','gst']]
                   .filter(([,key])=>key!=='cp'||showCost)
                   .map(([lb,key])=>(
