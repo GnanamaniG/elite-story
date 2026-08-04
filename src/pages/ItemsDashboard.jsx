@@ -223,6 +223,7 @@ export default function ItemsDashboard({ tenant, role='owner', onSwitchTab }) {
           <button onClick={()=>onSwitchTab?.('import')} style={btn(T.bg, T.sub, { border:`1px solid ${T.bdr}` })}>↑ Bulk</button>
           <button onClick={()=>openNew('product')} style={btn(T.red, T.white)}>+ Product</button>
           <button onClick={()=>openNew('service')} style={btn(T.purple, T.white)}>+ Service</button>
+          <button onClick={()=>onSwitchTab?.('repairs')} style={btn(T.amber, T.white)}>🔨 Repairs</button>
         </div>
       </div>
 
