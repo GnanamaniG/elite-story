@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { updateTenantSettings } from '../lib/supabase';
+import { useEffect } from 'react';
+import { updateTenantSettings, supabase } from '../lib/supabase';
 import { RETAIL_TYPES, OTHER_TYPES, ALL_TYPES } from '../lib/businessTypes';
 
 const T = {
@@ -44,6 +45,7 @@ export default function Settings({ tenant, user, onTenantUpdate }) {
       <div style={{ fontSize:22, fontWeight:800, color:T.ink, marginBottom:20 }}>Settings</div>
 
       <BusinessTypeSection tenant={tenant} onTenantUpdate={onTenantUpdate} T={T} inp={inp} lbl={lbl}/>
+      <LicenseSection tenant={tenant} T={T}/>
 
       <form onSubmit={handleSave}>
 
@@ -268,6 +270,87 @@ function BusinessTypeSection({ tenant, onTenantUpdate, T, inp, lbl }) {
         style={{ background:saved?T.green:T.red, color:'#fff', border:'none', borderRadius:8, padding:'10px 20px', fontSize:12.5, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
         {saving?'Saving…':saved?'✓ Saved':'Save Business Type'}
       </button>
+    </div>
+  );
+}
+
+const LICENSE_STATUS = {
+  trial:     { l:'Trial',     color:'#2563EB', bg:'#EFF6FF', bdr:'#BFDBFE', icon:'🧪' },
+  active:    { l:'Active',    color:'#16A34A', bg:'#F0FDF4', bdr:'#BBF7D0', icon:'✅' },
+  expired:   { l:'Expired',   color:'#C0392B', bg:'#FEF2F2', bdr:'#FECACA', icon:'⛔' },
+  suspended: { l:'Suspended', color:'#D97706', bg:'#FFFBEB', bdr:'#FDE68A', icon:'⏸️' },
+  cancelled: { l:'Cancelled', color:'#6B7280', bg:'#F9FAFB', bdr:'#E5E7EB', icon:'🚫' },
+};
+
+function LicenseSection({ tenant, T }) {
+  const [pkg, setPkg] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => { if (tenant?.license_package_id) load(); else setLoading(false); }, [tenant?.license_package_id]);
+
+  async function load() {
+    const { data } = await supabase.from('license_packages').select('*').eq('id', tenant.license_package_id).maybeSingle();
+    setPkg(data||null);
+    setLoading(false);
+  }
+
+  const status = LICENSE_STATUS[tenant?.license_status] || LICENSE_STATUS.trial;
+  const daysLeft = tenant?.license_expiry
+    ? Math.ceil((new Date(tenant.license_expiry) - new Date()) / 86400000)
+    : null;
+  const expiringSoon = daysLeft!=null && daysLeft <= 7 && daysLeft >= 0;
+  const expired = daysLeft!=null && daysLeft < 0;
+
+  return (
+    <div style={{ background:T.srf, border:`1px solid ${T.bdr}`, borderRadius:12, padding:20, marginBottom:16 }}>
+      <div style={{ fontWeight:700, color:T.ink, marginBottom:16 }}>📋 License &amp; Subscription</div>
+
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', flexWrap:'wrap', gap:12, marginBottom:14 }}>
+        <div>
+          <div style={{ fontSize:18, fontWeight:900, color:T.ink }}>{pkg?.name || 'No plan assigned'}</div>
+          {pkg?.description && <div style={{ fontSize:12, color:T.sub, marginTop:2 }}>{pkg.description}</div>}
+        </div>
+        <span style={{ background:status.bg, color:status.color, border:`1px solid ${status.bdr}`, borderRadius:20, padding:'6px 16px', fontSize:12, fontWeight:700 }}>
+          {status.icon} {status.l}
+        </span>
+      </div>
+
+      {(expiringSoon || expired) && (
+        <div style={{ background: expired?'#FEF2F2':'#FFFBEB', border:`1px solid ${expired?'#FECACA':'#FDE68A'}`, borderRadius:9, padding:'11px 14px', marginBottom:14, fontSize:12.5, color: expired?'#C0392B':'#D97706', fontWeight:600 }}>
+          {expired
+            ? `⚠️ Your license expired ${Math.abs(daysLeft)} day${Math.abs(daysLeft)!==1?'s':''} ago — contact us to renew and avoid interruption.`
+            : `⏰ Renews in ${daysLeft} day${daysLeft!==1?'s':''} — contact us to renew ahead of time.`}
+        </div>
+      )}
+
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fit,minmax(140px,1fr))', gap:10, marginBottom:14 }}>
+        {[
+          ['Started', tenant?.license_start||'—'],
+          ['Renews / Expires', tenant?.license_expiry||'—'],
+          ['Billing', tenant?.license_billing ? tenant.license_billing.charAt(0).toUpperCase()+tenant.license_billing.slice(1) : '—'],
+          ['License Key', tenant?.license_key||'—'],
+        ].map(([l,v])=>(
+          <div key={l} style={{ background:T.bg||'#F7F3F3', borderRadius:8, padding:'9px 12px' }}>
+            <div style={{ fontSize:9, color:T.muted, fontWeight:700, textTransform:'uppercase' }}>{l}</div>
+            <div style={{ fontSize:12.5, color:T.ink, fontWeight:600, fontFamily: l==='License Key'?'monospace':'inherit', marginTop:2, wordBreak:'break-all' }}>{v}</div>
+          </div>
+        ))}
+      </div>
+
+      {pkg?.features?.length>0 && (
+        <div>
+          <div style={{ fontSize:10, color:T.muted, fontWeight:700, textTransform:'uppercase', marginBottom:7 }}>Included in your plan</div>
+          <div style={{ display:'flex', flexWrap:'wrap', gap:6 }}>
+            {pkg.features.map(f=>(
+              <span key={f} style={{ background:'#F0FDF4', color:'#16A34A', border:'1px solid #BBF7D0', borderRadius:6, padding:'4px 10px', fontSize:11 }}>✓ {f}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div style={{ fontSize:11, color:T.muted, marginTop:14 }}>
+        This is managed by us — for upgrades, renewals, or billing questions, please get in touch directly.
+      </div>
     </div>
   );
 }
