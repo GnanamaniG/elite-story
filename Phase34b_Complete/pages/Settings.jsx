@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { updateTenantSettings } from '../lib/supabase';
+import { RETAIL_TYPES, OTHER_TYPES, ALL_TYPES } from '../lib/businessTypes';
 
 const T = {
   bg:'#F7F3F3', srf:'#FFFFFF', card:'#FFFFFF', card2:'#FFF5F5',
@@ -41,6 +42,8 @@ export default function Settings({ tenant, user, onTenantUpdate }) {
   return (
     <div style={{ padding:20, maxWidth:700 }}>
       <div style={{ fontSize:22, fontWeight:800, color:T.ink, marginBottom:20 }}>Settings</div>
+
+      <BusinessTypeSection tenant={tenant} onTenantUpdate={onTenantUpdate} T={T} inp={inp} lbl={lbl}/>
 
       <form onSubmit={handleSave}>
 
@@ -141,6 +144,112 @@ export default function Settings({ tenant, user, onTenantUpdate }) {
           {saving ? 'Saving…' : saved ? '✓ Saved!' : 'Save Settings'}
         </button>
       </form>
+    </div>
+  );
+}
+
+function BusinessTypeSection({ tenant, onTenantUpdate, T, inp, lbl }) {
+  const existingIds = (tenant.business_types||[])
+    .map(label => ALL_TYPES.find(t=>t.label===label)?.id)
+    .filter(Boolean);
+  const existingOther = (tenant.business_types||[])
+    .filter(label => !ALL_TYPES.find(t=>t.label===label));
+
+  const [selected,   setSelected]   = useState(existingIds);
+  const [otherTypes, setOtherTypes] = useState(existingOther);
+  const [showOther,  setShowOther]  = useState(false);
+  const [otherText,  setOtherText]  = useState('');
+  const [saving,     setSaving]     = useState(false);
+  const [saved,      setSaved]      = useState(false);
+
+  function toggle(id) { setSelected(s => s.includes(id) ? s.filter(x=>x!==id) : [...s, id]); }
+  function addOther() {
+    const v = otherText.trim(); if (!v) return;
+    setOtherTypes(p => [...new Set([...p, v])]); setOtherText(''); setShowOther(false);
+  }
+  function removeOther(v) { setOtherTypes(p => p.filter(x=>x!==v)); }
+
+  async function save() {
+    setSaving(true);
+    const labels = [...selected.map(id=>ALL_TYPES.find(t=>t.id===id)?.label).filter(Boolean), ...otherTypes];
+    try {
+      const updated = await updateTenantSettings(tenant.id, {
+        business_types: labels,
+        business_type: labels[0] || tenant.business_type || 'retail',
+      });
+      onTenantUpdate?.(updated);
+      setSaved(true); setTimeout(()=>setSaved(false), 3000);
+    } catch (e) { alert('Could not save: '+e.message); }
+    finally { setSaving(false); }
+  }
+
+  const total = selected.length + otherTypes.length;
+
+  return (
+    <div style={{ background:T.srf, border:`1px solid ${T.bdr}`, borderRadius:12, padding:20, marginBottom:16 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:16 }}>
+        <div style={{ fontWeight:700, color:T.ink }}>🏷️ Business Type</div>
+        {total>0 && <span style={{ fontSize:11, color:T.red, fontWeight:700 }}>{total} selected</span>}
+      </div>
+      <div style={{ fontSize:12, color:T.sub, marginBottom:14 }}>What you sell or offer — used to suggest relevant categories and features. Pick as many as apply.</div>
+
+      <div style={{ fontSize:10, color:T.muted, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:7 }}>🛍️ Retail & Commerce</div>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(110px,1fr))', gap:7, maxHeight:200, overflowY:'auto', marginBottom:14, paddingRight:4 }}>
+        {RETAIL_TYPES.map(t=>{
+          const on = selected.includes(t.id);
+          return (
+            <button key={t.id} type="button" onClick={()=>toggle(t.id)}
+              style={{ background:on?'#FDECEA':T.card, border:`1.5px solid ${on?T.red:T.bdr}`, borderRadius:9, padding:'8px 5px', cursor:'pointer', fontFamily:'inherit', textAlign:'center', position:'relative' }}>
+              {on && <span style={{ position:'absolute', top:3, right:4, color:T.red, fontSize:11, fontWeight:900 }}>✓</span>}
+              <div style={{ fontSize:16, marginBottom:2 }}>{t.icon}</div>
+              <div style={{ fontSize:9, fontWeight:on?700:500, color:on?T.red:T.sub, lineHeight:1.2 }}>{t.label}</div>
+            </button>
+          );
+        })}
+      </div>
+
+      <div style={{ fontSize:10, color:T.muted, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.05em', marginBottom:7 }}>💼 Services & Other Businesses</div>
+      <div style={{ display:'grid', gridTemplateColumns:'repeat(auto-fill,minmax(110px,1fr))', gap:7, maxHeight:160, overflowY:'auto', marginBottom:14, paddingRight:4 }}>
+        {OTHER_TYPES.map(t=>{
+          const on = selected.includes(t.id);
+          return (
+            <button key={t.id} type="button" onClick={()=>toggle(t.id)}
+              style={{ background:on?'#FDECEA':T.card, border:`1.5px solid ${on?T.red:T.bdr}`, borderRadius:9, padding:'8px 5px', cursor:'pointer', fontFamily:'inherit', textAlign:'center', position:'relative' }}>
+              {on && <span style={{ position:'absolute', top:3, right:4, color:T.red, fontSize:11, fontWeight:900 }}>✓</span>}
+              <div style={{ fontSize:16, marginBottom:2 }}>{t.icon}</div>
+              <div style={{ fontSize:9, fontWeight:on?700:500, color:on?T.red:T.sub, lineHeight:1.2 }}>{t.label}</div>
+            </button>
+          );
+        })}
+      </div>
+
+      <div style={{ marginBottom:16 }}>
+        {otherTypes.map(v=>(
+          <span key={v} style={{ display:'inline-flex', alignItems:'center', gap:6, background:'#FDECEA', border:`1px solid ${T.bdr}`, borderRadius:20, padding:'5px 8px 5px 12px', fontSize:11.5, color:T.darkRed, fontWeight:600, marginRight:7, marginBottom:7 }}>
+            {v}
+            <button type="button" onClick={()=>removeOther(v)} style={{ background:'rgba(192,57,43,.15)', color:T.red, border:'none', borderRadius:'50%', width:16, height:16, cursor:'pointer', fontSize:11, lineHeight:1, fontFamily:'inherit' }}>×</button>
+          </span>
+        ))}
+        {!showOther ? (
+          <button type="button" onClick={()=>setShowOther(true)}
+            style={{ background:T.bg, border:`1.5px dashed ${T.bdr}`, borderRadius:20, padding:'6px 14px', fontSize:11.5, color:T.sub, cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>
+            + Other — type your own
+          </button>
+        ) : (
+          <div style={{ display:'flex', gap:7 }}>
+            <input value={otherText} onChange={e=>setOtherText(e.target.value)}
+              onKeyDown={e=>{ if(e.key==='Enter'){ e.preventDefault(); addOther(); } }}
+              placeholder="e.g. Aquarium Supplies" autoFocus style={{ ...inp, flex:1 }}/>
+            <button type="button" onClick={addOther} style={{ background:T.red, color:'#fff', border:'none', borderRadius:8, padding:'9px 16px', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Add</button>
+            <button type="button" onClick={()=>{ setShowOther(false); setOtherText(''); }} style={{ background:T.bg, color:T.sub, border:`1px solid ${T.bdr}`, borderRadius:8, padding:'9px 12px', fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>Cancel</button>
+          </div>
+        )}
+      </div>
+
+      <button type="button" onClick={save} disabled={saving}
+        style={{ background:saved?T.green:T.red, color:'#fff', border:'none', borderRadius:8, padding:'10px 20px', fontSize:12.5, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>
+        {saving?'Saving…':saved?'✓ Saved':'Save Business Type'}
+      </button>
     </div>
   );
 }
