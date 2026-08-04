@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
+import { checkErrors } from '../lib/queryHelpers';
 
 const T = {
   bg:'#F7F3F3', srf:'#FFFFFF', card:'#FFFFFF', bdr:'#E8DEDE',
@@ -40,6 +41,7 @@ export default function BusinessPulse({ tenant, user, onNavigate }) {
   const [data,     setData]     = useState(null);
   const [goals,    setGoals]    = useState([]);
   const [loading,  setLoading]  = useState(true);
+  const [loadError, setLoadError] = useState(null);
   const [lastRefresh, setLastRefresh] = useState(new Date());
   const [autoRefresh, setAutoRefresh] = useState(true);
   const [showAI,   setShowAI]   = useState(true);
@@ -77,6 +79,12 @@ export default function BusinessPulse({ tenant, user, onNavigate }) {
       supabase.from('leave_requests').select('staff_name,from_date,to_date').eq('tenant_id',tenant.id).eq('status','approved').lte('from_date',today).gte('to_date',today),
       supabase.from('goals').select('*').eq('tenant_id',tenant.id).eq('period',`${yr}-${mo}`),
     ]);
+
+    const err = checkErrors({
+      sales:salesRes, previousSales:prevSalesRes, purchases:purRes, expenses:expRes,
+      inventory:invRes, customers:custRes, reminders:remindRes, leave:leaveRes, goals:goalsRes,
+    });
+    setLoadError(err);
 
     const sales=salesRes.data||[], prevSales=prevSalesRes.data||[], purs=purRes.data||[], exps=expRes.data||[], inv=invRes.data||[], custs=custRes.data||[];
 
@@ -205,6 +213,14 @@ export default function BusinessPulse({ tenant, user, onNavigate }) {
           <button onClick={load} style={btn(T.bg, T.sub, { border:`1px solid ${T.bdr}` })}>↻ Refresh</button>
         </div>
       </div>
+
+      {/* Data load error — visible on screen, not just the console */}
+      {loadError && (
+        <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', background:'#FEF2F2', border:'1px solid #FECACA', borderRadius:9, padding:'9px 15px', marginBottom:12, fontSize:11.5 }}>
+          <span style={{ color:T.red, fontWeight:600 }}>⚠️ Some figures may be incomplete — {loadError}</span>
+          <button onClick={load} style={{ background:'#fff', color:T.red, border:'1px solid #FECACA', borderRadius:6, padding:'4px 12px', fontSize:10.5, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>Retry</button>
+        </div>
+      )}
 
       {/* AI Insight */}
       <div onClick={()=>setShowAI(s=>!s)} style={{ background:toneBg, border:`1px solid ${toneColor}33`, borderRadius:10, padding:'10px 16px', marginBottom:12, display:'flex', alignItems:'center', gap:10, cursor:'pointer' }}>
