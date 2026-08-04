@@ -11,15 +11,69 @@ const btn = (bg,color,extra={}) => ({ background:bg, color, border:'none', borde
 const inp = { background:T.srf, border:`1px solid ${T.bdr}`, borderRadius:8, padding:'10px 13px', color:T.ink, fontSize:13, fontFamily:'inherit', outline:'none', width:'100%' };
 const lbl = { fontSize:10, color:T.sub, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.05em', display:'block', marginBottom:5 };
 
-const BUSINESS_TYPES = [
-  { id:'footwear',  label:'Footwear & Bags',   icon:'👟', cats:['Shoes','Sandals','Sports','Bags','Wallets','Belts','Accessories'] },
-  { id:'apparel',   label:'Clothing & Textile',icon:'👕', cats:['Shirts','Trousers','Sarees','Kids Wear','Innerwear','Fabric'] },
-  { id:'grocery',   label:'Grocery & Kirana',  icon:'🛒', cats:['Staples','Snacks','Beverages','Dairy','Household','Personal Care'] },
-  { id:'electronics',label:'Electronics',      icon:'📱', cats:['Mobiles','Accessories','Audio','Home Appliances','Computers'] },
-  { id:'pharmacy',  label:'Pharmacy',          icon:'💊', cats:['Prescription','OTC','Wellness','Baby Care','Devices'] },
-  { id:'hardware',  label:'Hardware & Paint',  icon:'🔧', cats:['Tools','Paint','Plumbing','Electrical','Fasteners'] },
-  { id:'other',     label:'Something else',    icon:'🏪', cats:['General'] },
+// Retail & Commerce — the specific sub-verticals a shop might be
+const RETAIL_TYPES = [
+  { id:'mobile',      label:'Mobile & Electronics',    icon:'📱', cats:['Mobiles','Accessories','Chargers','Repairs'] },
+  { id:'footwear',    label:'Footwear',                icon:'👟', cats:['Shoes','Sandals','Sports','Accessories'] },
+  { id:'apparel',     label:'Fashion & Apparel',        icon:'👕', cats:['Shirts','Trousers','Sarees','Kids Wear','Innerwear'] },
+  { id:'bags',        label:'Bags & Luggage',           icon:'👜', cats:['Handbags','Backpacks','Travel Bags','Wallets'] },
+  { id:'furniture',   label:'Furniture',                icon:'🛋️', cats:['Living Room','Bedroom','Office','Outdoor'] },
+  { id:'appliances',  label:'Home Appliances',          icon:'🏠', cats:['Kitchen','Cooling','Cleaning','Small Appliances'] },
+  { id:'computers',   label:'Computers & IT',           icon:'💻', cats:['Laptops','Desktops','Peripherals','Networking'] },
+  { id:'consumer_electronics', label:'Consumer Electronics', icon:'📺', cats:['TVs','Audio','Cameras','Wearables'] },
+  { id:'grocery',     label:'Grocery & Supermarket',    icon:'🛒', cats:['Staples','Snacks','Beverages','Dairy','Household'] },
+  { id:'jewellery',   label:'Jewellery',                icon:'💍', cats:['Gold','Silver','Diamond','Artificial'] },
+  { id:'beauty',      label:'Beauty & Cosmetics',       icon:'💄', cats:['Skincare','Makeup','Haircare','Fragrance'] },
+  { id:'pharmacy',    label:'Pharmacy',                 icon:'🏥', cats:['Prescription','OTC','Wellness','Baby Care'] },
+  { id:'sports',      label:'Sports & Fitness',         icon:'🏋️', cats:['Equipment','Apparel','Supplements','Footwear'] },
+  { id:'toys',        label:'Toys & Gifts',             icon:'🧸', cats:['Toys','Games','Gift Items','Party Supplies'] },
+  { id:'hardware',    label:'Hardware',                 icon:'🛠️', cats:['Tools','Paint','Plumbing','Electrical','Fasteners'] },
+  { id:'automobile',  label:'Automobile & Accessories', icon:'🚗', cats:['Parts','Accessories','Lubricants','Tyres'] },
+  { id:'books',       label:'Books & Stationery',       icon:'📚', cats:['Books','Notebooks','Office Supplies','Art Supplies'] },
+  { id:'pet',         label:'Pet Store',                icon:'🐶', cats:['Pet Food','Accessories','Grooming','Healthcare'] },
+  { id:'watches',     label:'Watches & Accessories',    icon:'⌚', cats:['Watches','Straps','Sunglasses','Accessories'] },
+  { id:'optical',     label:'Optical & Eyewear',        icon:'👓', cats:['Frames','Lenses','Sunglasses','Contact Lenses'] },
+  { id:'baby',        label:'Baby & Kids Store',        icon:'🍼', cats:['Clothing','Feeding','Toys','Diapers'] },
+  { id:'florist',     label:'Florist & Gift Shop',      icon:'🌸', cats:['Flowers','Bouquets','Gifts','Plants'] },
+  { id:'meat',        label:'Meat, Fish & Poultry',     icon:'🐟', cats:['Meat','Fish','Poultry','Seafood'] },
+  { id:'produce',     label:'Fruits & Vegetables',      icon:'🍎', cats:['Fruits','Vegetables','Organic'] },
+  { id:'bakery',      label:'Bakery & Confectionery',   icon:'🍰', cats:['Bread','Cakes','Sweets','Snacks'] },
+  { id:'liquor',      label:'Wine & Liquor Store',      icon:'🍷', cats:['Wine','Beer','Spirits','Mixers'] },
+  { id:'bicycle',     label:'Bicycle & Motorcycle Store', icon:'🏍️', cats:['Bicycles','Motorcycles','Parts','Accessories'] },
+  { id:'outdoor',     label:'Outdoor & Camping',        icon:'🏕️', cats:['Tents','Gear','Apparel','Accessories'] },
+  { id:'gaming',      label:'Gaming & Entertainment',   icon:'🎮', cats:['Consoles','Games','Accessories','Merchandise'] },
+  { id:'music',       label:'Musical Instruments',      icon:'🎵', cats:['Instruments','Accessories','Sheet Music'] },
+  { id:'homedecor',   label:'Home Decor & Furnishings', icon:'🏡', cats:['Decor','Curtains','Lighting','Rugs'] },
+  { id:'fabrics',     label:'Fabrics & Tailoring Materials', icon:'🧵', cats:['Fabric','Threads','Buttons','Trims'] },
+  { id:'printing',    label:'Printing & Office Supplies', icon:'🖨️', cats:['Printing','Stationery','Office Supplies'] },
+  { id:'department',  label:'Department Store',         icon:'🛒', cats:['General'] },
+  { id:'multibrand',  label:'Multi-Brand Retail Store', icon:'🛍️', cats:['General'] },
 ];
+
+// Everything that isn't a retail shop — services and other business models
+const OTHER_TYPES = [
+  { id:'healthcare',  label:'Healthcare',              icon:'🏥', cats:['General'] },
+  { id:'salon',       label:'Salon & Spa',             icon:'💇', cats:['Services'] },
+  { id:'food',        label:'Food & Hospitality',      icon:'🍽️', cats:['Menu Items'] },
+  { id:'hotel',       label:'Hotel & Hospitality',     icon:'🏨', cats:['Room Types','Services'] },
+  { id:'education',   label:'Education',               icon:'🎓', cats:['Courses'] },
+  { id:'fitness',     label:'Fitness & Wellness',      icon:'🏋️', cats:['Memberships','Sessions'] },
+  { id:'professional',label:'Professional Services',   icon:'💼', cats:['Services'] },
+  { id:'auto_service',label:'Automotive Services',     icon:'🚗', cats:['Services','Parts'] },
+  { id:'home_service', label:'Home Services',          icon:'🏡', cats:['Services'] },
+  { id:'tech_service', label:'Technology Services',    icon:'💻', cats:['Services'] },
+  { id:'finance',     label:'Financial Services',      icon:'💰', cats:['Services'] },
+  { id:'travel',      label:'Travel & Tourism',        icon:'✈️', cats:['Packages','Services'] },
+  { id:'realestate',  label:'Real Estate',             icon:'🏢', cats:['Listings','Services'] },
+  { id:'events',      label:'Event Management',        icon:'🎉', cats:['Services','Packages'] },
+  { id:'logistics',   label:'Logistics & Delivery',    icon:'🚚', cats:['Services'] },
+  { id:'manufacturing',label:'Manufacturing',          icon:'🏭', cats:['Raw Materials','Finished Goods'] },
+  { id:'wholesale',   label:'Wholesale & Distribution',icon:'📦', cats:['General'] },
+  { id:'agriculture', label:'Agriculture',             icon:'🌾', cats:['Produce','Supplies'] },
+  { id:'nonprofit',   label:'Non-Profit & Government', icon:'🏛️', cats:['General'] },
+];
+
+const ALL_TYPES = [...RETAIL_TYPES, ...OTHER_TYPES];
 
 const STEPS = ['Business','Tax & Money','Categories','Team','Done'];
 
@@ -28,18 +82,43 @@ export default function OnboardingWizard({ tenant, user, onComplete }) {
   const [saving, setSaving] = useState(false);
   const [error,  setError]  = useState(null);
   const [biz,    setBiz]    = useState({
-    name: tenant?.name || '', type:'footwear', phone:'', address:'', city:'', state:'Tamil Nadu', pincode:'',
+    name: tenant?.name || '', types:[], phone:'', address:'', city:'', state:'Tamil Nadu', pincode:'',
     gstin:'', pan:'', upi_id:'', bank_name:'', invoice_prefix:'INV', currency:'INR',
     fy_start:'04-01', gst_registered:true, composition:false,
   });
-  const [cats,   setCats]   = useState(BUSINESS_TYPES[0].cats);
+  const [showOther, setShowOther] = useState(false);
+  const [otherText, setOtherText] = useState('');
+  const [otherTypes, setOtherTypes] = useState([]); // custom-typed entries
+  const [cats,   setCats]   = useState([]);
   const [newCat, setNewCat] = useState('');
   const [staff,  setStaff]  = useState([{ name:'', email:'', role:'cashier' }]);
 
-  function pickType(t) {
-    setBiz(b=>({ ...b, type:t.id }));
-    setCats(t.cats);
+  function toggleType(id) {
+    setBiz(b => {
+      const types = b.types.includes(id) ? b.types.filter(x=>x!==id) : [...b.types, id];
+      // Merge suggested categories from every selected type, deduped
+      const merged = [...new Set(types.flatMap(tid => ALL_TYPES.find(t=>t.id===tid)?.cats || []))];
+      setCats(prev => [...new Set([...merged, ...otherTypes])]);
+      return { ...b, types };
+    });
   }
+
+  function addOtherType() {
+    const val = otherText.trim();
+    if (!val) return;
+    setOtherTypes(prev => [...new Set([...prev, val])]);
+    setCats(prev => [...new Set([...prev, val])]);
+    setOtherText(''); setShowOther(false);
+  }
+
+  function removeOtherType(val) {
+    setOtherTypes(prev => prev.filter(x=>x!==val));
+  }
+
+  const selectedLabels = () => [
+    ...biz.types.map(id => ALL_TYPES.find(t=>t.id===id)?.label).filter(Boolean),
+    ...otherTypes,
+  ];
 
   async function finish() {
     setSaving(true); setError(null);
@@ -50,7 +129,9 @@ export default function OnboardingWizard({ tenant, user, onComplete }) {
         city: biz.city, state: biz.state, pincode: biz.pincode,
         gstin: biz.gstin || null, pan: biz.pan || null,
         upi_id: biz.upi_id || null, bank_name: biz.bank_name || null,
-        invoice_prefix: biz.invoice_prefix, business_type: biz.type,
+        invoice_prefix: biz.invoice_prefix,
+        business_type: selectedLabels()[0] || 'retail',
+        business_types: [...biz.types.map(id=>ALL_TYPES.find(t=>t.id===id)?.label).filter(Boolean), ...otherTypes],
         onboarded: true,
       }).eq('id', tenant.id);
       if (tErr) throw tErr;
@@ -118,15 +199,63 @@ export default function OnboardingWizard({ tenant, user, onComplete }) {
               <div style={{ fontSize:12, color:T.sub, marginBottom:20 }}>This appears on every invoice and report you print</div>
 
               <div style={{ marginBottom:18 }}>
-                <label style={lbl}>What do you sell?</label>
-                <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:8 }}>
-                  {BUSINESS_TYPES.map(t=>(
-                    <button key={t.id} type="button" onClick={()=>pickType(t)}
-                      style={{ background:biz.type===t.id?T.lightRed:T.white, border:`1.5px solid ${biz.type===t.id?T.red:T.bdr}`, borderRadius:10, padding:'11px 6px', cursor:'pointer', fontFamily:'inherit', textAlign:'center' }}>
-                      <div style={{ fontSize:20, marginBottom:3 }}>{t.icon}</div>
-                      <div style={{ fontSize:10, fontWeight:biz.type===t.id?700:500, color:biz.type===t.id?T.red:T.sub, lineHeight:1.25 }}>{t.label}</div>
-                    </button>
+                <div style={{ display:'flex', justifyContent:'space-between', alignItems:'baseline', marginBottom:8 }}>
+                  <label style={lbl}>What do you sell or offer? <span style={{ textTransform:'none', fontWeight:400 }}>(pick as many as apply)</span></label>
+                  {(biz.types.length+otherTypes.length)>0 && <span style={{ fontSize:11, color:T.red, fontWeight:700 }}>{biz.types.length+otherTypes.length} selected</span>}
+                </div>
+
+                <div style={{ fontSize:10, color:T.muted, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.05em', margin:'10px 0 7px' }}>🛍️ Retail &amp; Commerce</div>
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:7, maxHeight:220, overflowY:'auto', paddingRight:4 }}>
+                  {RETAIL_TYPES.map(t=>{
+                    const on = biz.types.includes(t.id);
+                    return (
+                      <button key={t.id} type="button" onClick={()=>toggleType(t.id)}
+                        style={{ background:on?T.lightRed:T.white, border:`1.5px solid ${on?T.red:T.bdr}`, borderRadius:9, padding:'9px 5px', cursor:'pointer', fontFamily:'inherit', textAlign:'center', position:'relative' }}>
+                        {on && <span style={{ position:'absolute', top:3, right:4, color:T.red, fontSize:11, fontWeight:900 }}>✓</span>}
+                        <div style={{ fontSize:17, marginBottom:2 }}>{t.icon}</div>
+                        <div style={{ fontSize:9, fontWeight:on?700:500, color:on?T.red:T.sub, lineHeight:1.2 }}>{t.label}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div style={{ fontSize:10, color:T.muted, fontWeight:700, textTransform:'uppercase', letterSpacing:'0.05em', margin:'14px 0 7px' }}>💼 Services &amp; Other Businesses</div>
+                <div style={{ display:'grid', gridTemplateColumns:'repeat(4,1fr)', gap:7, maxHeight:180, overflowY:'auto', paddingRight:4 }}>
+                  {OTHER_TYPES.map(t=>{
+                    const on = biz.types.includes(t.id);
+                    return (
+                      <button key={t.id} type="button" onClick={()=>toggleType(t.id)}
+                        style={{ background:on?T.lightRed:T.white, border:`1.5px solid ${on?T.red:T.bdr}`, borderRadius:9, padding:'9px 5px', cursor:'pointer', fontFamily:'inherit', textAlign:'center', position:'relative' }}>
+                        {on && <span style={{ position:'absolute', top:3, right:4, color:T.red, fontSize:11, fontWeight:900 }}>✓</span>}
+                        <div style={{ fontSize:17, marginBottom:2 }}>{t.icon}</div>
+                        <div style={{ fontSize:9, fontWeight:on?700:500, color:on?T.red:T.sub, lineHeight:1.2 }}>{t.label}</div>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                {/* Other — manual entry for anything not listed */}
+                <div style={{ marginTop:12 }}>
+                  {otherTypes.map(v=>(
+                    <span key={v} style={{ display:'inline-flex', alignItems:'center', gap:6, background:T.lightRed, border:`1px solid ${T.bdr}`, borderRadius:20, padding:'5px 8px 5px 12px', fontSize:11.5, color:T.darkRed, fontWeight:600, marginRight:7, marginBottom:7 }}>
+                      {v}
+                      <button type="button" onClick={()=>removeOtherType(v)} style={{ background:'rgba(192,57,43,.15)', color:T.red, border:'none', borderRadius:'50%', width:16, height:16, cursor:'pointer', fontSize:11, lineHeight:1, fontFamily:'inherit' }}>×</button>
+                    </span>
                   ))}
+                  {!showOther ? (
+                    <button type="button" onClick={()=>setShowOther(true)}
+                      style={{ background:T.bg, border:`1.5px dashed ${T.bdr}`, borderRadius:20, padding:'6px 14px', fontSize:11.5, color:T.sub, cursor:'pointer', fontFamily:'inherit', fontWeight:600 }}>
+                      + Other — type your own
+                    </button>
+                  ) : (
+                    <div style={{ display:'flex', gap:7, marginTop:4 }}>
+                      <input value={otherText} onChange={e=>setOtherText(e.target.value)}
+                        onKeyDown={e=>{ if(e.key==='Enter'){ e.preventDefault(); addOtherType(); } }}
+                        placeholder="e.g. Aquarium Supplies" autoFocus style={{ ...inp, flex:1 }}/>
+                      <button type="button" onClick={addOtherType} style={btn(T.red, T.white, { padding:'9px 16px', fontSize:12 })}>Add</button>
+                      <button type="button" onClick={()=>{ setShowOther(false); setOtherText(''); }} style={{ background:T.bg, color:T.sub, border:`1px solid ${T.bdr}`, borderRadius:8, padding:'9px 12px', fontSize:12, cursor:'pointer', fontFamily:'inherit' }}>Cancel</button>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -254,7 +383,7 @@ export default function OnboardingWizard({ tenant, user, onComplete }) {
               <div style={{ background:T.bg, borderRadius:12, padding:'18px 22px', textAlign:'left', marginBottom:22 }}>
                 {[
                   ['Business',   biz.name + (biz.city?` · ${biz.city}`:'')],
-                  ['Type',       BUSINESS_TYPES.find(t=>t.id===biz.type)?.label],
+                  ['Type',       selectedLabels().length ? selectedLabels().join(', ') : 'Not specified'],
                   ['GST',        biz.gst_registered ? (biz.gstin || 'Registered — add GSTIN in Settings') : 'Not registered'],
                   ['Invoices',   `${biz.invoice_prefix||'INV'}/2026/00001`],
                   ['Categories', `${cats.length} set up`],
