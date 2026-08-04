@@ -39,8 +39,6 @@ export default function POS({ tenant, activeBranch, user }) {
   const [heldBills,   setHeldBills]   = useState([]);
   const [saving,      setSaving]      = useState(false);
   const [lastInv,     setLastInv]     = useState(null);
-  const [sendingBill,  setSendingBill]  = useState(false);
-  const [billSendMsg,  setBillSendMsg]  = useState(null); // {ok:bool, text:string} — non-blocking status, replaces alert()
   const [splitPay,    setSplitPay]    = useState(false);
   const [splitAmounts,setSplitAmounts]= useState({ cash:0, upi:0, card:0 });
   const [loyaltyRedeem,setLoyaltyRedeem]=useState(0);
@@ -261,16 +259,9 @@ export default function POS({ tenant, activeBranch, user }) {
 
       if (promoResult?.promo) await supabase.from('promo_codes').update({ uses_count:(promoResult.promo.uses_count||0)+1 }).eq('id', promoResult.promo.id);
 
-      const completedSale = { ...sale, inv_num: invNum, customerPhone:customer?.phone||'' };
-      setLastInv(completedSale);
+      setLastInv({ ...sale, inv_num: invNum, customerPhone:customer?.phone||'' });
       setCart([]); setCustomer(null); setDiscount(0); setManualDisc(''); setPromoCode(''); setPromoResult(null); setLoyaltyRedeem(0); setPickedSerials({});
       await load();
-
-      // Auto-send the bill on checkout — only when a customer with a
-      // phone number is actually attached, so a plain walk-in cash sale
-      // never triggers anything. Runs silently: no alert popups, just
-      // the small on-screen status banner near the Print/Send buttons.
-      if (completedSale.customerPhone) sendBillWhatsApp(completedSale, true);
     } catch(e) { alert('Checkout error: '+e.message); }
     finally { setSaving(false); }
   }
@@ -288,150 +279,16 @@ export default function POS({ tenant, activeBranch, user }) {
     w.document.write(html); w.document.close();
   }
 
-  // Renders the bill as a real image (not text) — 700px wide receipt,
-  // native resolution so it's crisp when opened full-screen on WhatsApp.
-  function renderBillImage(sale) {
-    // A clean summary card — this is what actually renders as the
-    // WhatsApp image, not an itemised table. The full itemised
-    // breakdown lives on the public "View Invoice" page instead,
-    // linked via the button below the message.
-    const cv = document.createElement('canvas');
-    const W = 700, H = 500;
-    cv.width = W; cv.height = H;
-    const ctx = cv.getContext('2d');
-
-    // Background + maroon header band
-    ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0,0,W,H);
-    const grad = ctx.createLinearGradient(0,0,W,0);
-    grad.addColorStop(0,'#7B1E1E'); grad.addColorStop(1,'#8B0000');
-    ctx.fillStyle = grad; ctx.fillRect(0,0,W,120);
-
-    // Store name, centered
-    ctx.fillStyle = '#FFFFFF'; ctx.textAlign = 'center';
-    ctx.font = '900 30px Arial'; ctx.fillText((tenant?.name||'Our Store').toUpperCase(), W/2, 56);
-    ctx.font = '500 13px Arial'; ctx.globalAlpha = 0.85;
-    ctx.fillText('Invoice ' + sale.inv_num + '  ·  ' + sale.date, W/2, 84);
-    ctx.globalAlpha = 1;
-
-    // "Amount Paid" — the hero figure
-    ctx.fillStyle = '#9CA3AF'; ctx.font = '700 13px Arial'; ctx.textAlign = 'center';
-    ctx.fillText('AMOUNT PAID', W/2, 190);
-    ctx.fillStyle = '#111827'; ctx.font = '900 56px Arial';
-    ctx.fillText(fmt(sale.total), W/2, 250);
-
-    // Status badge
-    // Same reasoning as PublicInvoice.jsx — POS has no partial/credit
-    // tracking today, so every bill it generates is fully paid.
-    const balanceDue = 0;
-    const paid = balanceDue <= 0.5;
-    const badgeLabel = paid ? 'FULLY PAID' : `BALANCE DUE ${fmt(balanceDue)}`;
-    const badgeColor = paid ? '#16A34A' : '#D97706';
-    ctx.font = '700 14px Arial';
-    const badgeW = ctx.measureText(badgeLabel).width + 40;
-    ctx.fillStyle = badgeColor;
-    ctx.beginPath(); ctx.roundRect(W/2 - badgeW/2, 275, badgeW, 34, 17); ctx.fill();
-    ctx.fillStyle = '#FFFFFF'; ctx.fillText(badgeLabel, W/2, 297);
-
-    // Divider
-    ctx.strokeStyle = '#E8DEDE'; ctx.beginPath(); ctx.moveTo(60,345); ctx.lineTo(W-60,345); ctx.stroke();
-
-    // Item count + subtotal quick facts, side by side
-    ctx.textAlign = 'center'; ctx.fillStyle = '#6B7280'; ctx.font = '600 12px Arial';
-    ctx.fillText('ITEMS', W/2-140, 380); ctx.fillText('GST', W/2, 380); ctx.fillText('DISCOUNT', W/2+140, 380);
-    ctx.fillStyle = '#111827'; ctx.font = '800 18px Arial';
-    ctx.fillText(String((sale.items||[]).length), W/2-140, 408);
-    ctx.fillText(fmt(sale.gst_amount||0), W/2, 408);
-    ctx.fillText(sale.discount>0?fmt(sale.discount):'—', W/2+140, 408);
-
-    ctx.fillStyle = '#9CA3AF'; ctx.font = '500 13px Arial'; ctx.textAlign = 'center';
-    ctx.fillText('Thank you for shopping with us! 🙏', W/2, 460);
-
-    return new Promise(resolve => cv.toBlob(blob => resolve(blob), 'image/png'));
-  }
-
-  async function sendBillWhatsApp(sale, silent=false) {
+  function sendBillWhatsApp(sale) {
     const phone = (sale.customerPhone||'').replace(/\D/g,'');
-    if (!phone) {
-      if (!silent) alert('No phone number on this bill — attach a customer with a phone number to send on WhatsApp.');
-      return;
-    }
-    setSendingBill(true); setBillSendMsg(null);
+    if (!phone) { alert('No phone number on this bill — attach a customer with a phone number to send on WhatsApp.'); return; }
     const to = phone.length===10 ? '91'+phone : phone.replace(/^0/,'91');
-
-    const { data: cfg } = await supabase.from('marketing_integrations').select('*').eq('tenant_id', tenant.id).maybeSingle();
-    const canSendImage = cfg?.meta_access_token && cfg?.wa_phone_number_id && cfg?.wa_receipt_template_name;
-
-    if (!canSendImage) {
-      // Not connected yet — fall back to the manual text-link method.
-      // Only actually pop the window open on a direct click (silent=false):
-      // a window.open() this far after an await gets silently blocked by
-      // most browsers when there was no direct user gesture, so auto-firing
-      // it after checkout would just fail invisibly. Show a status instead.
-      if (silent) {
-        setBillSendMsg({ ok:false, text:'WhatsApp not connected — tap Send on WhatsApp to send this bill manually' });
-        setSendingBill(false);
-        return;
-      }
-      const biz = tenant?.name || 'Our Store';
-      const lines = (sale.items||[]).map(i => `${i.name} x${i.qty} — ${fmt(i.amount)}`).join('\n');
-      const msg = `*${biz}*\nInvoice: *${sale.inv_num}*\nDate: ${sale.date}\n\n${lines}\n\nSubtotal: ${fmt(sale.subtotal)}\nCGST: ${fmt((sale.gst_amount||0)/2)}\nSGST: ${fmt((sale.gst_amount||0)/2)}` +
-        (sale.discount>0 ? `\nDiscount: -${fmt(sale.discount)}` : '') +
-        `\n*Total: ${fmt(sale.total)}*\n\nThank you for shopping with us! 🙏`;
-      window.open(`https://wa.me/${to}?text=${encodeURIComponent(msg)}`, '_blank');
-      setSendingBill(false);
-      return;
-    }
-
-    try {
-      const blob = await renderBillImage(sale);
-      const path = `${tenant.id}/bill-${sale.inv_num}-${Date.now()}.png`;
-      const { error: upErr } = await supabase.storage.from('campaign-images').upload(path, blob, { upsert:false, contentType:'image/png' });
-      if (upErr) throw upErr;
-      const { data: pub } = supabase.storage.from('campaign-images').getPublicUrl(path);
-
-      const resp = await fetch(`https://graph.facebook.com/v20.0/${cfg.wa_phone_number_id}/messages`, {
-        method:'POST',
-        headers:{ 'Authorization':`Bearer ${cfg.meta_access_token}`, 'Content-Type':'application/json' },
-        body: JSON.stringify({
-          messaging_product:'whatsapp', to,
-          type:'template',
-          template:{
-            name: cfg.wa_receipt_template_name,
-            language:{ code:cfg.wa_receipt_template_lang||'en' },
-            components:[
-              { type:'header', parameters:[{ type:'image', image:{ link: pub.publicUrl } }] },
-              { type:'body', parameters:[
-                { type:'text', text: sale.customer||'Customer' },
-                { type:'text', text: sale.inv_num },
-                { type:'text', text: fmt(sale.total) },
-              ]},
-              // "View Invoice" button — the template's URL button must be
-              // configured in Meta as a dynamic URL ending in {{1}}; this
-              // parameter fills in just the sale's id as the suffix.
-              { type:'button', sub_type:'url', index:'0', parameters:[
-                { type:'text', text: sale.id },
-              ]},
-            ],
-          },
-        }),
-      });
-      if (!resp.ok) {
-        const err = await resp.json().catch(()=>({}));
-        throw new Error(err.error?.message || `WhatsApp API returned ${resp.status}`);
-      }
-      setBillSendMsg({ ok:true, text:'Bill image sent on WhatsApp ✅' });
-      setTimeout(()=>setBillSendMsg(null), 4000);
-    } catch (e) {
-      setBillSendMsg({ ok:false, text:'Auto-send failed ('+e.message+') — tap Send on WhatsApp to try manually' });
-      // Note: NOT auto-opening wa.me here when this ran automatically after
-      // checkout — a window.open() call this far removed from a direct click
-      // gets silently blocked by most browsers' popup blockers anyway, and a
-      // failed silent popup is worse than a clear on-screen message telling
-      // the cashier to tap the button themselves.
-      if (!silent) window.open(`https://wa.me/${to}?text=${encodeURIComponent('Invoice '+sale.inv_num+' — Total '+fmt(sale.total))}`, '_blank');
-    } finally {
-      setSendingBill(false);
-    }
+    const biz = tenant?.name || 'Our Store';
+    const lines = (sale.items||[]).map(i => `${i.name} x${i.qty} — ${fmt(i.amount)}`).join('\n');
+    const msg = `*${biz}*\nInvoice: *${sale.inv_num}*\nDate: ${sale.date}\n\n${lines}\n\nSubtotal: ${fmt(sale.subtotal)}\nCGST: ${fmt((sale.gst_amount||0)/2)}\nSGST: ${fmt((sale.gst_amount||0)/2)}` +
+      (sale.discount>0 ? `\nDiscount: -${fmt(sale.discount)}` : '') +
+      `\n*Total: ${fmt(sale.total)}*\n\nThank you for shopping with us! 🙏`;
+    window.open(`https://wa.me/${to}?text=${encodeURIComponent(msg)}`, '_blank');
   }
 
   const categories   = ['all', ...new Set(inventory.map(i=>i.cat||i.category).filter(Boolean))];
@@ -752,17 +609,9 @@ export default function POS({ tenant, activeBranch, user }) {
           {lastInv&&(
             <div style={{ display:'flex', gap:8 }}>
               <button onClick={()=>printReceipt(lastInv)} style={{ flex:1, background:T.blue+'22', color:T.blue, border:'none', borderRadius:8, padding:'10px', fontSize:12, fontWeight:700, cursor:'pointer', fontFamily:'inherit' }}>🖨️ Print — {lastInv.inv_num}</button>
-              <button onClick={()=>sendBillWhatsApp(lastInv)} disabled={!lastInv.customerPhone||sendingBill}
+              <button onClick={()=>sendBillWhatsApp(lastInv)} disabled={!lastInv.customerPhone}
                 title={lastInv.customerPhone?'':'No phone number on this bill'}
-                style={{ flex:1, background: lastInv.customerPhone?'#DCFCE7':T.card, color: lastInv.customerPhone?T.green:T.muted, border:'none', borderRadius:8, padding:'10px', fontSize:12, fontWeight:700, cursor: lastInv.customerPhone&&!sendingBill?'pointer':'not-allowed', fontFamily:'inherit' }}>{sendingBill?'Sending…':'💬 Send on WhatsApp'}</button>
-            </div>
-          )}
-          {billSendMsg && (
-            <div style={{ marginTop:6, padding:'7px 11px', borderRadius:7, fontSize:11,
-                          background: billSendMsg.ok?'#F0FDF4':'#FFFBEB',
-                          color: billSendMsg.ok?T.green:T.amber,
-                          border:`1px solid ${billSendMsg.ok?'#BBF7D0':'#FDE68A'}` }}>
-              {billSendMsg.ok?'✅':'⚠️'} {billSendMsg.text}
+                style={{ flex:1, background: lastInv.customerPhone?'#DCFCE7':T.card, color: lastInv.customerPhone?T.green:T.muted, border:'none', borderRadius:8, padding:'10px', fontSize:12, fontWeight:700, cursor: lastInv.customerPhone?'pointer':'not-allowed', fontFamily:'inherit' }}>💬 Send on WhatsApp</button>
             </div>
           )}
         </div>

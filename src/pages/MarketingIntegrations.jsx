@@ -130,7 +130,8 @@ export default function MarketingIntegrations({ tenant, role='owner' }) {
         <Guide steps={[
           'In WhatsApp Manager, create a new template and set its category to Utility (not Marketing)',
           'Add a Header component of type Image',
-          'Add a Body with exactly 3 variables, e.g. "Hi {{1}}, thanks for your purchase! Invoice {{2}} — Total {{3}}. See your bill above."',
+          'Add a Body with exactly 3 variables, e.g. "Hi {{1}}, thank you for your business! Your Sales Invoice is ready. Invoice No: {{2}}, Amount: {{3}}. Tap below to view your full invoice."',
+          'Add a Button component: type "Visit Website", URL type "Dynamic", and set the base URL to https://elite-story.vercel.app/invoice/ with {{1}} as the suffix — this is what makes the View Invoice button work',
           'Submit for approval — Utility templates are usually approved faster than Marketing ones',
           'Once APPROVED, copy the exact template name and language code above',
           'Until this is set up, the Send on WhatsApp button in POS falls back to opening a manual text-only chat instead',

@@ -291,51 +291,60 @@ export default function POS({ tenant, activeBranch, user }) {
   // Renders the bill as a real image (not text) — 700px wide receipt,
   // native resolution so it's crisp when opened full-screen on WhatsApp.
   function renderBillImage(sale) {
+    // A clean summary card — this is what actually renders as the
+    // WhatsApp image, not an itemised table. The full itemised
+    // breakdown lives on the public "View Invoice" page instead,
+    // linked via the button below the message.
     const cv = document.createElement('canvas');
-    const W = 700, LH = 30;
-    const lines = sale.items||[];
-    const H = 340 + lines.length*LH + (sale.discount>0?LH:0);
+    const W = 700, H = 500;
     cv.width = W; cv.height = H;
     const ctx = cv.getContext('2d');
 
+    // Background + maroon header band
     ctx.fillStyle = '#FFFFFF'; ctx.fillRect(0,0,W,H);
-    ctx.fillStyle = '#7B1E1E'; ctx.fillRect(0,0,W,86);
-    ctx.fillStyle = '#FFFFFF'; ctx.font = '900 26px Arial'; ctx.fillText(tenant?.name||'Our Store', 28, 40);
-    ctx.font = '500 13px Arial'; ctx.fillText(`Invoice ${sale.inv_num}  ·  ${sale.date}`, 28, 64);
+    const grad = ctx.createLinearGradient(0,0,W,0);
+    grad.addColorStop(0,'#7B1E1E'); grad.addColorStop(1,'#8B0000');
+    ctx.fillStyle = grad; ctx.fillRect(0,0,W,120);
 
-    let y = 120;
-    ctx.fillStyle = '#6B7280'; ctx.font = '700 11px Arial';
-    ctx.fillText('ITEM', 28, y); ctx.fillText('QTY', W-220, y); ctx.fillText('AMOUNT', W-100, y);
-    y += 14; ctx.strokeStyle = '#E8DEDE'; ctx.beginPath(); ctx.moveTo(28,y); ctx.lineTo(W-28,y); ctx.stroke();
-    y += 24;
+    // Store name, centered
+    ctx.fillStyle = '#FFFFFF'; ctx.textAlign = 'center';
+    ctx.font = '900 30px Arial'; ctx.fillText((tenant?.name||'Our Store').toUpperCase(), W/2, 56);
+    ctx.font = '500 13px Arial'; ctx.globalAlpha = 0.85;
+    ctx.fillText('Invoice ' + sale.inv_num + '  ·  ' + sale.date, W/2, 84);
+    ctx.globalAlpha = 1;
 
-    ctx.font = '600 15px Arial'; ctx.fillStyle = '#111827';
-    lines.forEach(li => {
-      ctx.fillText(li.name.length>36?li.name.slice(0,34)+'…':li.name, 28, y);
-      ctx.fillStyle = '#6B7280'; ctx.fillText(String(li.qty), W-215, y);
-      ctx.fillStyle = '#C0392B'; ctx.font = '700 15px Arial'; ctx.fillText(fmt(li.amount), W-140, y);
-      ctx.fillStyle = '#111827'; ctx.font = '600 15px Arial';
-      y += LH;
-    });
+    // "Amount Paid" — the hero figure
+    ctx.fillStyle = '#9CA3AF'; ctx.font = '700 13px Arial'; ctx.textAlign = 'center';
+    ctx.fillText('AMOUNT PAID', W/2, 190);
+    ctx.fillStyle = '#111827'; ctx.font = '900 56px Arial';
+    ctx.fillText(fmt(sale.total), W/2, 250);
 
-    y += 6; ctx.strokeStyle = '#E8DEDE'; ctx.beginPath(); ctx.moveTo(28,y); ctx.lineTo(W-28,y); ctx.stroke(); y += 28;
+    // Status badge
+    // Same reasoning as PublicInvoice.jsx — POS has no partial/credit
+    // tracking today, so every bill it generates is fully paid.
+    const balanceDue = 0;
+    const paid = balanceDue <= 0.5;
+    const badgeLabel = paid ? 'FULLY PAID' : `BALANCE DUE ${fmt(balanceDue)}`;
+    const badgeColor = paid ? '#16A34A' : '#D97706';
+    ctx.font = '700 14px Arial';
+    const badgeW = ctx.measureText(badgeLabel).width + 40;
+    ctx.fillStyle = badgeColor;
+    ctx.beginPath(); ctx.roundRect(W/2 - badgeW/2, 275, badgeW, 34, 17); ctx.fill();
+    ctx.fillStyle = '#FFFFFF'; ctx.fillText(badgeLabel, W/2, 297);
 
-    const row = (label, val, bold) => {
-      ctx.font = bold ? '900 20px Arial' : '500 14px Arial';
-      ctx.fillStyle = bold ? '#111827' : '#6B7280';
-      ctx.fillText(label, 28, y);
-      ctx.fillStyle = bold ? '#16A34A' : '#111827';
-      ctx.textAlign = 'right'; ctx.fillText(val, W-28, y); ctx.textAlign = 'left';
-      y += bold ? 34 : 24;
-    };
-    row('Subtotal', fmt(sale.subtotal));
-    row('CGST', fmt((sale.gst_amount||0)/2));
-    row('SGST', fmt((sale.gst_amount||0)/2));
-    if (sale.discount>0) row('Discount', '-'+fmt(sale.discount));
-    row('TOTAL', fmt(sale.total), true);
+    // Divider
+    ctx.strokeStyle = '#E8DEDE'; ctx.beginPath(); ctx.moveTo(60,345); ctx.lineTo(W-60,345); ctx.stroke();
 
-    ctx.fillStyle = '#9CA3AF'; ctx.font = '500 12px Arial';
-    ctx.fillText('Thank you for shopping with us! 🙏', 28, H-16);
+    // Item count + subtotal quick facts, side by side
+    ctx.textAlign = 'center'; ctx.fillStyle = '#6B7280'; ctx.font = '600 12px Arial';
+    ctx.fillText('ITEMS', W/2-140, 380); ctx.fillText('GST', W/2, 380); ctx.fillText('DISCOUNT', W/2+140, 380);
+    ctx.fillStyle = '#111827'; ctx.font = '800 18px Arial';
+    ctx.fillText(String((sale.items||[]).length), W/2-140, 408);
+    ctx.fillText(fmt(sale.gst_amount||0), W/2, 408);
+    ctx.fillText(sale.discount>0?fmt(sale.discount):'—', W/2+140, 408);
+
+    ctx.fillStyle = '#9CA3AF'; ctx.font = '500 13px Arial'; ctx.textAlign = 'center';
+    ctx.fillText('Thank you for shopping with us! 🙏', W/2, 460);
 
     return new Promise(resolve => cv.toBlob(blob => resolve(blob), 'image/png'));
   }
@@ -395,6 +404,12 @@ export default function POS({ tenant, activeBranch, user }) {
                 { type:'text', text: sale.customer||'Customer' },
                 { type:'text', text: sale.inv_num },
                 { type:'text', text: fmt(sale.total) },
+              ]},
+              // "View Invoice" button — the template's URL button must be
+              // configured in Meta as a dynamic URL ending in {{1}}; this
+              // parameter fills in just the sale's id as the suffix.
+              { type:'button', sub_type:'url', index:'0', parameters:[
+                { type:'text', text: sale.id },
               ]},
             ],
           },

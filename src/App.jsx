@@ -6,6 +6,7 @@ import OnboardingWizard from './pages/OnboardingWizard';
 import { canAccess } from './lib/roleAccess';
 import AppShell           from './components/layout/AppShell';
 import BusinessPulse from './pages/BusinessPulse';
+import PublicInvoice from './pages/PublicInvoice';
 import POS                from './pages/POS';
 import Sales              from './pages/Sales';
 import Inventory          from './pages/Inventory';
@@ -411,6 +412,14 @@ export default function App() {
   const{role}=useRole(user,activeTenant);
   useEffect(()=>{if(activeTenant&&activeTenant.onboarded===false)setShowOnboard(true);},[activeTenant?.id,activeTenant?.onboarded]);
   useEffect(()=>{if(!activeTenant?.id)return;supabase.from('branches').select('*').eq('tenant_id',activeTenant.id).eq('active',true).order('is_main',{ascending:false}).order('name').then(({data})=>{if(data?.length){setBranches(data);setActiveBranch(data.find(b=>b.is_main)||data[0]);}}).catch(()=>{});},[activeTenant?.id]);
+  // Public invoice link — must work with NO login at all, since the
+  // customer receiving the WhatsApp message has never signed into the app.
+  // Checked before anything else, ahead of the auth/loading gate below.
+  if (window.location.pathname.startsWith('/invoice/')) {
+    const invId = window.location.pathname.split('/invoice/')[1]?.split('?')[0];
+    return <PublicInvoice saleId={invId}/>;
+  }
+
   if(loading)return(<div style={{minHeight:'100vh',background:'#F7F3F3',display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:16}}><div style={{width:52,height:52,background:'#7B1E1E',borderRadius:14,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:900,fontSize:20,color:'#fff'}}>7SQ</div><div style={{width:40,height:40,border:'3px solid #C0392B',borderTopColor:'transparent',borderRadius:'50%',animation:'spin .7s linear infinite'}}/><style>{'@keyframes spin{to{transform:rotate(360deg)}}'}</style></div>);
   if(!user)return<LoginPage/>;
   const props={deepTab,role,onNavigate:nav,tenant:activeTenant,user,activeBranch};
