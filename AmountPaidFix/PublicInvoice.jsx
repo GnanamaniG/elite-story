@@ -49,7 +49,10 @@ export default function PublicInvoice({ saleId }) {
   );
 
   const cgst = (sale.gst_amount||0)/2, sgst = (sale.gst_amount||0)/2;
-  const balanceDue = Math.max(0, (sale.total||0) - (sale.amount_paid ?? sale.total ?? 0));
+  // Every sale POS creates is inserted with status:'paid' — there is no
+  // partial/credit payment tracking in the current checkout flow, so
+  // every invoice reaching this page is fully paid, by definition.
+  const balanceDue = 0;
 
   return (
     <div style={{ minHeight:'100vh', background:T.bg, padding:'30px 16px', fontFamily:'Arial, sans-serif' }}>
