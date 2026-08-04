@@ -7,6 +7,7 @@ import { canAccess } from './lib/roleAccess';
 import AppShell           from './components/layout/AppShell';
 import BusinessPulse from './pages/BusinessPulse';
 import PublicInvoice from './pages/PublicInvoice';
+import PlatformAdmin from './pages/PlatformAdmin';
 import POS                from './pages/POS';
 import Sales              from './pages/Sales';
 import Inventory          from './pages/Inventory';
@@ -422,6 +423,15 @@ export default function App() {
 
   if(loading)return(<div style={{minHeight:'100vh',background:'#F7F3F3',display:'flex',alignItems:'center',justifyContent:'center',flexDirection:'column',gap:16}}><div style={{width:52,height:52,background:'#7B1E1E',borderRadius:14,display:'flex',alignItems:'center',justifyContent:'center',fontWeight:900,fontSize:20,color:'#fff'}}>7SQ</div><div style={{width:40,height:40,border:'3px solid #C0392B',borderTopColor:'transparent',borderRadius:'50%',animation:'spin .7s linear infinite'}}/><style>{'@keyframes spin{to{transform:rotate(360deg)}}'}</style></div>);
   if(!user)return<LoginPage/>;
+
+  // Platform operator console — requires a real signed-in session, but
+  // deliberately does not depend on any tenant being resolved. Checked
+  // here, after login, before any tenant/onboarding logic runs. Access
+  // itself is verified inside PlatformAdmin against the database — this
+  // path check alone grants nothing.
+  if (window.location.pathname === '/platform-console') {
+    return <PlatformAdmin user={user}/>;
+  }
   const props={deepTab,role,onNavigate:nav,tenant:activeTenant,user,activeBranch};
   const PAGES={
     invhub:        <InvHub        {...props}/>,
